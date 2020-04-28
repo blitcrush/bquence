@@ -19,12 +19,14 @@ As with most C++ libraries, the hardest part of using bquence is setting up its 
 Once you've set up dependencies, it's probably easiest to compile bquence into your project in source form rather than linking it as a separate library. Simply add ```lib/include``` to your include path and ```lib/src``` to your list of source files, and you're good to go!
 
 ## Usage
+**UPDATE**: One preliminary example has been released, and it demonstrates implementing a REPL-like system in which users can interact with a bquence World via the standard terminal I/O. Please see [examples/repl.cpp](examples/repl.cpp) if you're interested in a full demonstration of bquence usage.
+
 *To celebrate the first full release of bquence, a code-only example will soon be provided in addition to the slightly verbose explanatory documentation here.*
 
 One convenient header file provides easy access to all the greatness of bquence.
 
 ```
-#include "bqWorld.h"
+#include <bqWorld.h>
 ```
 
 A ```bq::World``` is roughly equivalent to a sequencing session in a modern DAW - an audio file library, audio engine, and IO engine all bundled into one interface. When instantiating a ```World```, you'll need to tell it how many channels and what sample rate to use for streaming and processing audio. It's probably best to use two channels and a rate of either 44,100 or 48,000 samples per second (depending on what the soundcard prefers). Here's an example:
@@ -40,29 +42,42 @@ delete world;
 world = new bq::World(2, 48000);
 ```
 
-A world by itself produces audio samples but doesn't actually play them back through your speakers or audio interface - for that, you'll need the help of an external library such as [miniaudio](https://github.com/dr-soft/miniaudio), [PortAudio](http://www.portaudio.com/), or [RtAudio](https://www.music.mcgill.ca/~gary/rtaudio/). Once you have acquired one or more output device(s) and audio callback(s) from your choice of audio I/O library, you can start playing the output of your world into that device. For example:
+A world by itself produces audio samples but doesn't actually play them back through your speakers or audio interface - for that, you'll need the help of an external library such as [miniaudio](https://github.com/dr-soft/miniaudio), [PortAudio](http://www.portaudio.com/), or [RtAudio](https://www.music.mcgill.ca/~gary/rtaudio/). Once you have acquired and output device and audio callback from your choice of audio I/O library, you can start playing the output of your world into that device. For example:
 
 ```
 void audio_callback(float *out_frames, unsigned int num_out_frames) {
+  // Use whatever method you prefer to clear the output buffer...
+  for (unsigned int i = 0; i < num_out_frames * num_out_channels; ++i) {
+    out_frames[i] = 0.0f;
+  }
+
   // You'll probably want to get the "world" pointer through whatever user data
   // mechanism your audio I/O library provides.
   world->pump_audio_thread();
   world->pull_audio(0, 0, out_frames, num_out_frames);
+  world->pull_done_advance_playhead(0, num_out_frames);
 }
 ```
 
-```pump_audio_thread()``` must be called at the beginning of each audio callback. It handles messages from the IO thread, such as receiving new audio samples streamed from the disk and responding to arrangement edits.
+```pump_audio_thread()``` must be called at the beginning of the audio callback. It handles messages from the IO thread, such as receiving new audio samples streamed from the disk and responding to arrangement edits.
 
-```pull_audio``` renders interleaved PCM frames into an output buffer for a given playhead and track. It's signature looks like this:
+```pull_audio``` renders interleaved PCM frames into an output buffer for a given playhead and track. Any frames in the output buffer which are not occupied by a playing clip will simply be left untouched, so you'll need to zero the output buffer before pulling into it if your audio I/O library doesn't automatically do that for you. Its signature looks like this:
 
 ```
 void pull_audio(unsigned int playhead_idx, unsigned int track_idx,
   float *out_frames, ma_uint64 num_frames);
 ```
 
-So the above audio callback example renders the requested ```num_out_frames``` of the output of the first playhead and the first track into the ```out_frames``` buffer. Speaking of playheads and tracks, please don't miss the **Configuration** section below, where you'll learn how to set the number of available playheads and tracks in a world at compile-time.
+```pull_done_advance_playhead``` advances the given playhead by the appropriate number of beats corresponding to the given number of output frames. It should be called once, after you're done pulling audio from any necessary tracks. Its signature looks like this:
 
-If you want to implement a mixing system (perhaps applying some gain and effects to certain tracks and routing different playheads to different outputs), you can call ```pull_audio``` with a temporary output buffer, which can then be accessed by your mixing system. At that point, the mixing system can do whatever is appropriate for the current post-sequencer audio, applying effects and making sure it's routed to the correct outputs.
+```
+void pull_done_advance_playhead(unsigned int playhead_idx,
+  ma_uint64 num_frames);
+```
+
+So the above audio callback example renders the requested ```num_out_frames``` of the output of the first playhead and the first track into the ```out_frames``` buffer, and then it advances the playhead by ```num_out_frames``` so that it will be in the correct position to render the next group of frames. Speaking of playheads and tracks, please don't miss the **Configuration** section below, where you'll learn how to set the number of available playheads and tracks in a world at compile-time.
+
+If you want to implement a mixing system (perhaps applying some gain and effects to certain tracks and routing different playheads to different outputs), you can call ```pull_audio``` with a temporary output buffer (which, again, needs to be zeroed before pulling), which can then be accessed by your mixing system. At that point, the mixing system can do whatever is appropriate for the current post-sequencer audio, applying effects and making sure it's routed to the correct outputs.
 
 Since audio callbacks are bound by real-time constraints (meaning no memory allocation, locks, or disks I/O operations are advisable inside an audio callback), many important tasks need to take place in a separate thread. bquence calls this thread the I/O thread, and you'll have to create and manage it yourself. Inside that thread, you need to repeatedly call ```pump_io_thread```. ```pump_io_thread``` accepts a boolean argument indicating whether it should sleep (```true```) or whether you'll manage the thread's sleeping yourself (```false```). Normally, if that thread is completely dedicated to bquence, you'll just want to call ```pump_io_thread(true)``` and nothing else. Alternatively, if bquence needs to share that thread with some other code, it's probably best to call ```pump_io_thread(false)``` and schedule that thread yourself. (Do note that you'll want to call ```pump_io_thread``` fairly often, maybe about every 10ms or so, to ensure that it's able to stream data from the disk and send it to the audio engine before that data is immediately needed).
 

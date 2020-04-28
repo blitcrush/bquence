@@ -43,6 +43,8 @@ public:
 	// Should only be called from the audio thread
 	void pull_audio(unsigned int playhead_idx, unsigned int track_idx,
 		float *out_frames, ma_uint64 num_frames);
+	void pull_done_advance_playhead(unsigned int playhead_idx,
+		ma_uint64 num_frames);
 
 private:
 	AudioEngine *_audio = nullptr;

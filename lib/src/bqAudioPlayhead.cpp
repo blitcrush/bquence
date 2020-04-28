@@ -69,14 +69,17 @@ ma_uint64 AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
 			ma_uint64 num_pulled = _pull(track_idx, clip, _st_src,
 				num_want);
 			if (num_pulled > 0) {
-				soundtouch_putSamples(st, _st_src, num_pulled);
+				soundtouch_putSamples(st, _st_src,
+					static_cast<unsigned int>(num_pulled));
 			}
 			if (num_pulled < num_want) {
 				pull_failed = true;
 			}
 		}
 
-		unsigned int max_num_receive = num_frames - total_num_received;
+		unsigned int max_num_receive =
+			static_cast<unsigned int>(num_frames) -
+			total_num_received;
 		float *cur_dest = dest + (total_num_received * _num_channels);
 		int cur_num_received = soundtouch_receiveSamples(st, cur_dest,
 			max_num_receive);

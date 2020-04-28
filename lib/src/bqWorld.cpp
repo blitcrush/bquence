@@ -120,6 +120,13 @@ void World::pull_audio(unsigned int playhead_idx, unsigned int track_idx,
 {
 	if (_audio) {
 		_audio->pull(playhead_idx, track_idx, out_frames, num_frames);
+	}
+}
+
+void World::pull_done_advance_playhead(unsigned int playhead_idx,
+	ma_uint64 num_frames)
+{
+	if (_audio) {
 		_audio->pull_done_advance_playhead(playhead_idx, num_frames);
 	}
 }

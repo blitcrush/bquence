@@ -37,7 +37,7 @@ PlayheadChunk *IOAudioFileDecoder::decode(ma_uint64 from_frame)
 		return nullptr;
 	}
 
-	unsigned int needs_chunk_threshold = _next_send_frame;
+	ma_uint64 needs_chunk_threshold = _next_send_frame;
 	// This is statement is necessary because these are *unsigned* ints - we
 	// wouldn't want them to wrap around to a huge number if we subtracted
 	// a larger number from a smaller number
