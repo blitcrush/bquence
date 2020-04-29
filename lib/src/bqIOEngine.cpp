@@ -123,7 +123,7 @@ void IOEngine::handle_all_msgs()
 
 			for (unsigned int j = 0; j < _NUM_PLAYHEADS; ++j) {
 				_playheads[j].cur_clip_dirty[i] = true;
-				_decoders[j][i].invalidate_last_state();
+				_decoders[j][i].invalidate_last_clip_idx();
 			}
 
 			_track_dirty[i] = false;
@@ -250,7 +250,7 @@ void IOEngine::_decode_next_cache_chunks(unsigned int playhead_idx,
 	}
 
 	IOAudioFileDecoder &decoder = _decoders[playhead_idx][track_idx];
-	decoder.set_clip_idx(clip_idx);
+	decoder.set_clip_idx(_library, clip_idx, clip);
 	decoder.set_song_id(_library, song_id);
 
 	PlayheadChunk *chunk = nullptr;
@@ -327,7 +327,7 @@ void IOEngine::_handle_jump_playhead(IOMsgJumpPlayhead &msg)
 		playhead.block_decode = true;
 		for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
 			playhead.cur_clip_dirty[i] = true;
-			_decoders[msg.playhead][i].invalidate_last_state();
+			_decoders[msg.playhead][i].playhead_jumped();
 		}
 	}
 }

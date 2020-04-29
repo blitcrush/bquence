@@ -1,6 +1,7 @@
 #ifndef BQIOAUDIOFILEDECODER_H
 #define BQIOAUDIOFILEDECODER_H
 
+#include "bqAudioClip.h"
 #include "bqPlayheadChunk.h"
 #include "bqLibrary.h"
 #include "bqConfig.h"
@@ -15,14 +16,19 @@ public:
 
 	void set_decode_config(ma_uint32 num_channels, ma_uint32 sample_rate);
 
-	void set_clip_idx(unsigned int clip_idx);
+	void set_clip_idx(Library *library, unsigned int clip_idx,
+		const AudioClip &cur_clip);
 	void set_song_id(Library *library, unsigned int song_id);
 	PlayheadChunk *decode(ma_uint64 from_frame);
 
-	void invalidate_last_state();
+	void invalidate_last_clip_idx();
+	void playhead_jumped();
 
 private:
 	void _reset_next_send_frame();
+
+	bool _needs_reset_next_frame(Library *library,
+		const AudioClip &cur_clip);
 
 	void _open_file(Library *library, unsigned int song_id);
 	void _close_file();
@@ -33,6 +39,13 @@ private:
 	ma_uint64 _decoder_cur_frame = 0;
 	ma_uint64 _next_send_frame = 0;
 	bool _next_send_frame_valid = false;
+
+	struct _LastClipInfo {
+		double start = -1.0;
+		ma_uint64 first_frame = 0;
+		unsigned int song_id = 0;
+	} _last_clip;
+	bool _last_clip_valid = false;
 
 	unsigned int _last_clip_idx = 0;
 	bool _last_clip_idx_valid = false;

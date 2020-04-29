@@ -13,10 +13,14 @@ void IOAudioFileDecoder::set_decode_config(ma_uint32 num_channels,
 	_sample_rate = sample_rate;
 }
 
-void IOAudioFileDecoder::set_clip_idx(unsigned int clip_idx)
+void IOAudioFileDecoder::set_clip_idx(Library *library, unsigned int clip_idx,
+	const AudioClip &cur_clip)
 {
 	if (!_last_clip_idx_valid || clip_idx != _last_clip_idx) {
-		_reset_next_send_frame();
+		if (_needs_reset_next_frame(library, cur_clip)) {
+			_reset_next_send_frame();
+		}
+
 		_last_clip_idx = clip_idx;
 		_last_clip_idx_valid = true;
 	}
@@ -38,7 +42,7 @@ PlayheadChunk *IOAudioFileDecoder::decode(ma_uint64 from_frame)
 	}
 
 	ma_uint64 needs_chunk_threshold = _next_send_frame;
-	// This is statement is necessary because these are *unsigned* ints - we
+	// This if statement is necessary because these are *unsigned* ints - we
 	// wouldn't want them to wrap around to a huge number if we subtracted
 	// a larger number from a smaller number
 	if (needs_chunk_threshold > _SEND_FRAME_WINDOW) {
@@ -93,10 +97,14 @@ PlayheadChunk *IOAudioFileDecoder::decode(ma_uint64 from_frame)
 	return chunk;
 }
 
-void IOAudioFileDecoder::invalidate_last_state()
+void IOAudioFileDecoder::invalidate_last_clip_idx()
 {
 	_last_clip_idx_valid = false;
-	_last_song_id_valid = false;
+}
+
+void IOAudioFileDecoder::playhead_jumped()
+{
+	_reset_next_send_frame();
 }
 
 void IOAudioFileDecoder::_reset_next_send_frame()
@@ -105,6 +113,49 @@ void IOAudioFileDecoder::_reset_next_send_frame()
 	_next_send_frame_valid = false;
 
 	_end_of_song = false;
+}
+
+bool IOAudioFileDecoder::_needs_reset_next_frame(Library *library,
+	const AudioClip &cur_clip)
+{
+	bool needs_reset_next_frame = true;
+
+	if (library && _last_clip_valid) {
+		if (cur_clip.song_id == _last_clip.song_id) {
+			ma_uint64 frames_delta = llabs(static_cast<ma_int64>(
+				cur_clip.first_frame) - static_cast<ma_int64>(
+					_last_clip.first_frame));
+
+			double beats_delta = fabs(cur_clip.start -
+				_last_clip.start);
+
+			ma_uint64 beats_delta_to_frames =
+				library->beats_to_samples(cur_clip.song_id,
+					beats_delta);
+
+			ma_uint64 beats_frames_delta = llabs(
+				static_cast<ma_int64>(beats_delta_to_frames) -
+				static_cast<ma_int64>(frames_delta));
+
+			// Accounts for floating-point (double) precision errors
+			// An error of only two frames with the benefit of no
+			// audio dropout is completely tolerable in most
+			// situations.
+			constexpr ma_uint64 BEATS_FRAMES_DELTA_TOLERANCE = 2;
+
+			if (beats_frames_delta <=
+				BEATS_FRAMES_DELTA_TOLERANCE) {
+				needs_reset_next_frame = false;
+			}
+		}
+	}
+
+	_last_clip.start = cur_clip.start;
+	_last_clip.first_frame = cur_clip.first_frame;
+	_last_clip.song_id = cur_clip.song_id;
+	_last_clip_valid = true;
+
+	return needs_reset_next_frame;
 }
 
 void IOAudioFileDecoder::_open_file(Library *library, unsigned int song_id)

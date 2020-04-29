@@ -59,6 +59,9 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 	double last_beat = first_beat + num_beats;
 
 	unsigned int first_clip = playhead.get_cur_clip_idx(track_idx);
+	if (!track.is_clip_valid(first_clip)) {
+		return;
+	}
 	unsigned int last_clip = first_clip;
 
 	while (track.is_clip_valid(last_clip + 1)) {
@@ -148,6 +151,10 @@ void AudioEngine::bind_io_engine(IOEngine *io)
 void AudioEngine::bind_library(Library *library)
 {
 	_library = library;
+
+	for (unsigned int i = 0; i < _NUM_PLAYHEADS; ++i) {
+		_playheads[i].bind_library(_library);
+	}
 }
 
 void AudioEngine::handle_all_msgs()
@@ -361,10 +368,11 @@ void AudioEngine::_handle_receive_cur_clip_idx(AudioMsgReceiveCurClipIdx &msg)
 		AudioPlayhead &playhead = _playheads[msg.playhead];
 		AudioClipsArray &track = _tracks[msg.track];
 
-		playhead.set_cur_clip_idx(msg.track, msg.cur_clip_idx);
 		if (track.is_clip_valid(msg.cur_clip_idx)) {
-			playhead.set_cur_song_id(msg.track,
-				track.clips[msg.cur_clip_idx].song_id);
+			AudioClip &cur_clip = track.clips[msg.cur_clip_idx];
+			playhead.set_cur_clip_idx(msg.track, msg.cur_clip_idx,
+				cur_clip);
+			playhead.set_cur_song_id(msg.track, cur_clip.song_id);
 		}
 	}
 }
@@ -395,10 +403,11 @@ void AudioEngine::_handle_jump_playhead(AudioMsgJumpPlayhead &msg)
 
 		playhead.jump(msg.beat);
 
-		playhead.set_cur_clip_idx(msg.track, msg.cur_clip_idx);
 		if (track.is_clip_valid(msg.cur_clip_idx)) {
-			playhead.set_cur_song_id(msg.track,
-				track.clips[msg.cur_clip_idx].song_id);
+			AudioClip &cur_clip = track.clips[msg.cur_clip_idx];
+			playhead.set_cur_clip_idx(msg.track, msg.cur_clip_idx,
+				cur_clip);
+			playhead.set_cur_song_id(msg.track, cur_clip.song_id);
 		}
 
 		if (_io) {
@@ -425,11 +434,10 @@ void AudioEngine::_update_cur_clip_idx(unsigned int playhead_idx,
 		}
 	}
 
-	playhead.set_cur_clip_idx(track_idx, cur_clip_idx);
-
 	if (track.is_clip_valid(cur_clip_idx)) {
-		playhead.set_cur_song_id(track_idx,
-			track.clips[cur_clip_idx].song_id);
+		AudioClip &cur_clip = track.clips[cur_clip_idx];
+		playhead.set_cur_clip_idx(track_idx, cur_clip_idx, cur_clip);
+		playhead.set_cur_song_id(track_idx, cur_clip.song_id);
 	}
 }
 }
