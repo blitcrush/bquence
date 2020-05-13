@@ -19,7 +19,7 @@ public:
 	void set_clip_idx(Library *library, unsigned int clip_idx,
 		const AudioClip &cur_clip);
 	void set_song_id(Library *library, unsigned int song_id);
-	PlayheadChunk *decode(ma_uint64 from_frame);
+	PlayheadChunk *decode(Library *library, ma_uint64 from_frame);
 
 	void invalidate_last_clip_idx();
 	void playhead_jumped();

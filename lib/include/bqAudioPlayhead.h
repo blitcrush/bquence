@@ -60,6 +60,7 @@ private:
 	struct _ChunksList {
 		PlayheadChunk *head = nullptr, *tail = nullptr;
 		ma_uint64 cur_want_frame = 0;
+		bool round = true;
 	};
 	struct _LastClipInfo {
 		double start = -1.0;

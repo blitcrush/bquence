@@ -35,18 +35,23 @@ void IOAudioFileDecoder::set_song_id(Library *library, unsigned int song_id)
 	}
 }
 
-PlayheadChunk *IOAudioFileDecoder::decode(ma_uint64 from_frame)
+PlayheadChunk *IOAudioFileDecoder::decode(Library *library,
+	ma_uint64 from_frame)
 {
 	if (!_decoder_ready || _end_of_song) {
 		return nullptr;
 	}
 
+	double orig_factor = library->sample_rate(_last_song_id) / _sample_rate;
+
+	ma_uint64 actual_send_frame_window = static_cast<ma_uint64>(
+		static_cast<double>(_SEND_FRAME_WINDOW) * orig_factor + 0.5);
 	ma_uint64 needs_chunk_threshold = _next_send_frame;
 	// This if statement is necessary because these are *unsigned* ints - we
 	// wouldn't want them to wrap around to a huge number if we subtracted
 	// a larger number from a smaller number
-	if (needs_chunk_threshold > _SEND_FRAME_WINDOW) {
-		needs_chunk_threshold -= _SEND_FRAME_WINDOW;
+	if (needs_chunk_threshold > actual_send_frame_window) {
+		needs_chunk_threshold -= actual_send_frame_window;
 	} else {
 		needs_chunk_threshold = 0;
 	}
@@ -64,6 +69,7 @@ PlayheadChunk *IOAudioFileDecoder::decode(ma_uint64 from_frame)
 	if (_decoder_cur_frame != actual_from_frame) {
 		if (ma_decoder_seek_to_pcm_frame(&_decoder, actual_from_frame)
 			!= MA_SUCCESS) {
+			// End of song ??
 			return nullptr;
 		}
 	}
@@ -80,7 +86,8 @@ PlayheadChunk *IOAudioFileDecoder::decode(ma_uint64 from_frame)
 
 	ma_uint64 num_decoded_frames = ma_decoder_read_pcm_frames(&_decoder,
 		chunk->frames, _CHUNK_NUM_FRAMES);
-	_decoder_cur_frame += num_decoded_frames;
+	_decoder_cur_frame += static_cast<ma_uint64>(static_cast<double>(
+		num_decoded_frames) * orig_factor + 0.5);
 
 	chunk->num_frames = num_decoded_frames;
 	if (chunk->num_frames < _CHUNK_NUM_FRAMES) {
@@ -92,7 +99,8 @@ PlayheadChunk *IOAudioFileDecoder::decode(ma_uint64 from_frame)
 		return nullptr;
 	}
 
-	_next_send_frame = actual_from_frame + _CHUNK_NUM_FRAMES;
+	_next_send_frame = actual_from_frame + static_cast<ma_uint64>(
+		static_cast<double>(_CHUNK_NUM_FRAMES) * orig_factor + 0.5);
 
 	return chunk;
 }

@@ -217,26 +217,42 @@ void AudioPlayhead::_setup_soundtouch(HANDLE &st)
 ma_uint64 AudioPlayhead::_pull(unsigned int track_idx, AudioClip &clip,
 	float *dest, ma_uint64 num_frames)
 {
+	double orig_factor = _library->sample_rate(_cur_song_ids[track_idx]) /
+		_sample_rate;
+	double inv_orig_factor = 1.0 / orig_factor;
+
 	ma_uint64 initial_want_frame = _cache[track_idx].cur_want_frame;
 	ma_uint64 num_pulled = clip.pull_preload(dest, initial_want_frame,
-		num_frames);
+		num_frames, orig_factor, inv_orig_factor);
 
 	_ChunksList &chunks = _cache[track_idx];
 	while (chunks.head && num_pulled < num_frames) {
 		PlayheadChunk *chunk = chunks.head;
 
-		ma_uint64 cur_first_frame = initial_want_frame + num_pulled;
-		ma_uint64 chunk_last_frame = chunk->first_frame +
-			chunk->num_frames;
+		ma_uint64 orig_num_pulled = static_cast<ma_uint64>(
+			static_cast<double>(num_pulled) * orig_factor + 0.5);
+
+		ma_uint64 cur_first_want_frame = initial_want_frame +
+			orig_num_pulled;
+
+		ma_uint64 chunk_orig_num_frames = static_cast<ma_uint64>(
+			static_cast<double>(chunk->num_frames) * orig_factor +
+			0.5);
+		ma_uint64 chunk_orig_last_frame = chunk->first_frame +
+			chunk_orig_num_frames;
 
 		if (chunk->song_id == _cur_song_ids[track_idx] &&
-			cur_first_frame >= chunk->first_frame &&
-			cur_first_frame < chunk_last_frame) {
+			cur_first_want_frame >= chunk->first_frame &&
+			cur_first_want_frame < chunk_orig_last_frame) {
 			ma_uint64 need_frames = num_frames - num_pulled;
-			ma_uint64 avail_frames = chunk_last_frame -
-				cur_first_frame;
-			ma_uint64 cur_src_first_frame = cur_first_frame -
-				chunk->first_frame;
+			ma_uint64 avail_frames = static_cast<ma_uint64>(
+				static_cast<double>(chunk_orig_last_frame -
+					cur_first_want_frame) *
+				inv_orig_factor + 0.5);
+			ma_uint64 cur_src_first_frame = static_cast<ma_uint64>(
+				static_cast<double>(cur_first_want_frame -
+					chunk->first_frame) * inv_orig_factor +
+				0.5);
 			ma_uint64 cur_dest_first_frame = num_pulled;
 
 			if (avail_frames <= need_frames) {
@@ -259,7 +275,16 @@ ma_uint64 AudioPlayhead::_pull(unsigned int track_idx, AudioClip &clip,
 		}
 	}
 
-	_cache[track_idx].cur_want_frame = initial_want_frame + num_frames;
+	double orig_num_frames = static_cast<double>(num_frames) * orig_factor;
+	ma_uint64 round_orig_num_frames = static_cast<ma_uint64>(orig_num_frames
+		+ (_cache[track_idx].round ? 0.5 : 0.0));
+	if (round_orig_num_frames > orig_num_frames) {
+		_cache[track_idx].round = false;
+	} else if (round_orig_num_frames < orig_num_frames) {
+		_cache[track_idx].round = true;
+	}
+	_cache[track_idx].cur_want_frame = initial_want_frame +
+		round_orig_num_frames;
 
 	return num_pulled;
 }
