@@ -64,6 +64,10 @@ void IOEngine::bind_library(Library *library)
 	_library = library;
 
 	for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
+		for (unsigned int j = 0; j < _NUM_PLAYHEADS; ++j) {
+			_decoders[j][i].bind_library(_library);
+		}
+
 		_tracks[i].bind_library(_library);
 	}
 }
@@ -242,22 +246,20 @@ void IOEngine::_decode_next_cache_chunks(unsigned int playhead_idx,
 	}
 
 	ma_uint64 min_from_frame = clip.first_frame +
-		static_cast<ma_uint64>(
-			static_cast<double>(IOTrack::PRELOAD_NUM_FRAMES) *
-			(_library->sample_rate(clip.song_id) /
-				_decode_sample_rate) + 0.5);
+		IOTrack::PRELOAD_NUM_FRAMES;
 	ma_uint64 decode_from_frame = clip.first_frame +
-		_library->beats_to_samples(song_id, playhead_beat - clip.start);
+		_library->beats_to_out_samples(song_id,
+			playhead_beat - clip.start);
 	if (decode_from_frame < min_from_frame) {
 		decode_from_frame = min_from_frame;
 	}
 
 	IOAudioFileDecoder &decoder = _decoders[playhead_idx][track_idx];
-	decoder.set_clip_idx(_library, clip_idx, clip);
-	decoder.set_song_id(_library, song_id);
+	decoder.set_clip_idx(clip_idx, clip);
+	decoder.set_song_id(song_id);
 
 	PlayheadChunk *chunk = nullptr;
-	while (chunk = decoder.decode(_library, decode_from_frame)) {
+	while (chunk = decoder.decode(decode_from_frame)) {
 		_audio->receive_playhead_chunk(playhead_idx, track_idx, chunk);
 	}
 }

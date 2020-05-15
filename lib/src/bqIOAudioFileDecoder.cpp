@@ -13,11 +13,16 @@ void IOAudioFileDecoder::set_decode_config(ma_uint32 num_channels,
 	_sample_rate = sample_rate;
 }
 
-void IOAudioFileDecoder::set_clip_idx(Library *library, unsigned int clip_idx,
+void IOAudioFileDecoder::bind_library(Library *library)
+{
+	_library = library;
+}
+
+void IOAudioFileDecoder::set_clip_idx(unsigned int clip_idx,
 	const AudioClip &cur_clip)
 {
 	if (!_last_clip_idx_valid || clip_idx != _last_clip_idx) {
-		if (_needs_reset_next_frame(library, cur_clip)) {
+		if (_needs_reset_next_frame(cur_clip)) {
 			_reset_next_send_frame();
 		}
 
@@ -26,32 +31,27 @@ void IOAudioFileDecoder::set_clip_idx(Library *library, unsigned int clip_idx,
 	}
 }
 
-void IOAudioFileDecoder::set_song_id(Library *library, unsigned int song_id)
+void IOAudioFileDecoder::set_song_id(unsigned int song_id)
 {
 	if (!_last_song_id_valid || song_id != _last_song_id) {
-		_open_file(library, song_id);
+		_open_file(song_id);
 		_last_song_id = song_id;
 		_last_song_id_valid = true;
 	}
 }
 
-PlayheadChunk *IOAudioFileDecoder::decode(Library *library,
-	ma_uint64 from_frame)
+PlayheadChunk *IOAudioFileDecoder::decode(ma_uint64 from_frame)
 {
 	if (!_decoder_ready || _end_of_song) {
 		return nullptr;
 	}
 
-	double orig_factor = library->sample_rate(_last_song_id) / _sample_rate;
-
-	ma_uint64 actual_send_frame_window = static_cast<ma_uint64>(
-		static_cast<double>(_SEND_FRAME_WINDOW) * orig_factor + 0.5);
 	ma_uint64 needs_chunk_threshold = _next_send_frame;
 	// This if statement is necessary because these are *unsigned* ints - we
 	// wouldn't want them to wrap around to a huge number if we subtracted
 	// a larger number from a smaller number
-	if (needs_chunk_threshold > actual_send_frame_window) {
-		needs_chunk_threshold -= actual_send_frame_window;
+	if (needs_chunk_threshold > _SEND_FRAME_WINDOW) {
+		needs_chunk_threshold -= _SEND_FRAME_WINDOW;
 	} else {
 		needs_chunk_threshold = 0;
 	}
@@ -67,9 +67,11 @@ PlayheadChunk *IOAudioFileDecoder::decode(Library *library,
 	}
 
 	if (_decoder_cur_frame != actual_from_frame) {
-		if (ma_decoder_seek_to_pcm_frame(&_decoder, actual_from_frame)
-			!= MA_SUCCESS) {
-			// End of song ??
+		ma_uint64 song_actual_from_frame = _library->samples_out2self(
+			_last_song_id, actual_from_frame);
+		if (ma_decoder_seek_to_pcm_frame(&_decoder,
+			song_actual_from_frame) != MA_SUCCESS) {
+			_end_of_song = true;
 			return nullptr;
 		}
 	}
@@ -86,8 +88,7 @@ PlayheadChunk *IOAudioFileDecoder::decode(Library *library,
 
 	ma_uint64 num_decoded_frames = ma_decoder_read_pcm_frames(&_decoder,
 		chunk->frames, _CHUNK_NUM_FRAMES);
-	_decoder_cur_frame += static_cast<ma_uint64>(static_cast<double>(
-		num_decoded_frames) * orig_factor + 0.5);
+	_decoder_cur_frame += num_decoded_frames;
 
 	chunk->num_frames = num_decoded_frames;
 	if (chunk->num_frames < _CHUNK_NUM_FRAMES) {
@@ -99,8 +100,7 @@ PlayheadChunk *IOAudioFileDecoder::decode(Library *library,
 		return nullptr;
 	}
 
-	_next_send_frame = actual_from_frame + static_cast<ma_uint64>(
-		static_cast<double>(_CHUNK_NUM_FRAMES) * orig_factor + 0.5);
+	_next_send_frame = actual_from_frame + _CHUNK_NUM_FRAMES;
 
 	return chunk;
 }
@@ -123,12 +123,11 @@ void IOAudioFileDecoder::_reset_next_send_frame()
 	_end_of_song = false;
 }
 
-bool IOAudioFileDecoder::_needs_reset_next_frame(Library *library,
-	const AudioClip &cur_clip)
+bool IOAudioFileDecoder::_needs_reset_next_frame(const AudioClip &cur_clip)
 {
 	bool needs_reset_next_frame = true;
 
-	if (library && _last_clip_valid) {
+	if (_library && _last_clip_valid) {
 		if (cur_clip.song_id == _last_clip.song_id) {
 			ma_uint64 frames_delta = llabs(static_cast<ma_int64>(
 				cur_clip.first_frame) - static_cast<ma_int64>(
@@ -138,7 +137,7 @@ bool IOAudioFileDecoder::_needs_reset_next_frame(Library *library,
 				_last_clip.start);
 
 			ma_uint64 beats_delta_to_frames =
-				library->beats_to_samples(cur_clip.song_id,
+				_library->beats_to_out_samples(cur_clip.song_id,
 					beats_delta);
 
 			ma_uint64 beats_frames_delta = llabs(
@@ -166,13 +165,13 @@ bool IOAudioFileDecoder::_needs_reset_next_frame(Library *library,
 	return needs_reset_next_frame;
 }
 
-void IOAudioFileDecoder::_open_file(Library *library, unsigned int song_id)
+void IOAudioFileDecoder::_open_file(unsigned int song_id)
 {
 	_close_file();
 
 	ma_decoder_config decoder_cfg = ma_decoder_config_init(ma_format_f32,
 		_num_channels, _sample_rate);
-	if (ma_decoder_init_file(library->filename(song_id).c_str(),
+	if (ma_decoder_init_file(_library->filename(song_id).c_str(),
 		&decoder_cfg, &_decoder) == MA_SUCCESS) {
 		_decoder_ready = true;
 	}

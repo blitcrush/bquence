@@ -110,7 +110,7 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 			continue;
 		}
 		ma_uint64 song_first_frame = clip.first_frame +
-			_library->beats_to_samples(clip.song_id,
+			_library->beats_to_out_samples(clip.song_id,
 				first_beat - clip.start);
 
 		float *cur_dest = dest + (clip_first_frame_ofs * _num_channels);

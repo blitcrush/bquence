@@ -12,8 +12,7 @@ public:
 	~AudioClip() {}
 
 	ma_uint64 pull_preload(float *dest, ma_uint64 first_pull_frame,
-		ma_uint64 num_pull_frames, double orig_factor,
-		double inv_orig_factor);
+		ma_uint64 num_pull_frames);
 
 	double start = -1.0, end = -1.0; // Measured in beats
 	double pitch_shift = 0.0; // Measured in semitones

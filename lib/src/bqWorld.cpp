@@ -4,6 +4,7 @@ namespace bq {
 World::World(ma_uint32 num_channels, ma_uint32 sample_rate)
 {
 	_library = new Library;
+	_library->set_out_sample_rate(sample_rate);
 
 	_audio = new AudioEngine;
 	_audio->set_playback_config(num_channels, sample_rate);

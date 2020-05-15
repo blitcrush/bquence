@@ -32,10 +32,10 @@ void IOTrack::insert_clip(double start, double end, unsigned int song_id,
 	clip.start = start;
 	clip.end = end;
 	clip.pitch_shift = pitch_shift;
-	clip.first_frame = first_frame;
+	clip.first_frame = _library->samples_self2out(clip.song_id,
+		first_frame);
 	if (_library) {
-		clip.preload = _preload(_library->filename(clip.song_id),
-			clip.first_frame);
+		clip.preload = _preload(clip.song_id, clip.first_frame);
 	}
 	it = _clips.insert(it, clip);
 }
@@ -69,11 +69,11 @@ void IOTrack::erase_clips_range(double from, double to)
 			it = _clips.erase(it);
 		} else if (contains_start) { // <- PRELOADS HERE
 			if (_library) {
-				it->first_frame += _library->beats_to_samples(
-					it->song_id, to - it->start);
+				it->first_frame +=
+					_library->beats_to_out_samples(
+						it->song_id, to - it->start);
 				_old_preloads.push_back(it->preload.frames);
-				it->preload = _preload(
-					_library->filename(it->song_id),
+				it->preload = _preload(it->song_id,
 					it->first_frame);
 			}
 			it->start = to;
@@ -100,10 +100,10 @@ void IOTrack::erase_clips_range(double from, double to)
 
 			AudioClip last = old;
 			if (_library) {
-				last.first_frame += _library->beats_to_samples(
-					last.song_id, to - last.start);
-				last.preload = _preload(
-					_library->filename(last.song_id),
+				last.first_frame +=
+					_library->beats_to_out_samples(
+						last.song_id, to - last.start);
+				last.preload = _preload(last.song_id,
 					last.first_frame);
 			}
 			last.start = to;
@@ -163,8 +163,7 @@ bool IOTrack::is_clip_valid(unsigned int clip_idx)
 	return clip_idx < _clips.size();
 }
 
-AudioClipPreload IOTrack::_preload(const std::string &filename,
-	ma_uint64 first_frame)
+AudioClipPreload IOTrack::_preload(unsigned int song_id, ma_uint64 first_frame)
 {
 	AudioClipPreload result;
 
@@ -172,9 +171,10 @@ AudioClipPreload IOTrack::_preload(const std::string &filename,
 		_preload_num_channels, _preload_sample_rate);
 
 	ma_decoder decoder;
-	if (ma_decoder_init_file(filename.c_str(), &decoder_cfg, &decoder) ==
-		MA_SUCCESS) {
-		if (ma_decoder_seek_to_pcm_frame(&decoder, first_frame) ==
+	if (ma_decoder_init_file(_library->filename(song_id).c_str(),
+		&decoder_cfg, &decoder) == MA_SUCCESS) {
+		if (ma_decoder_seek_to_pcm_frame(&decoder,
+			_library->samples_out2self(song_id, first_frame)) ==
 			MA_SUCCESS) {
 			result.num_channels = _preload_num_channels;
 			result.sample_rate = _preload_sample_rate;

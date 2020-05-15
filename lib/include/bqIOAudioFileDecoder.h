@@ -16,10 +16,11 @@ public:
 
 	void set_decode_config(ma_uint32 num_channels, ma_uint32 sample_rate);
 
-	void set_clip_idx(Library *library, unsigned int clip_idx,
-		const AudioClip &cur_clip);
-	void set_song_id(Library *library, unsigned int song_id);
-	PlayheadChunk *decode(Library *library, ma_uint64 from_frame);
+	void bind_library(Library *library);
+
+	void set_clip_idx(unsigned int clip_idx, const AudioClip &cur_clip);
+	void set_song_id(unsigned int song_id);
+	PlayheadChunk *decode(ma_uint64 from_frame);
 
 	void invalidate_last_clip_idx();
 	void playhead_jumped();
@@ -27,10 +28,9 @@ public:
 private:
 	void _reset_next_send_frame();
 
-	bool _needs_reset_next_frame(Library *library,
-		const AudioClip &cur_clip);
+	bool _needs_reset_next_frame(const AudioClip &cur_clip);
 
-	void _open_file(Library *library, unsigned int song_id);
+	void _open_file(unsigned int song_id);
 	void _close_file();
 
 	ma_uint32 _num_channels = 0;
@@ -62,6 +62,8 @@ private:
 		STREAMER_NEXT_CHUNK_WINDOW_NUM_FRAMES;
 	static constexpr ma_uint64 _CHUNK_NUM_FRAMES =
 		STREAMER_CHUNK_NUM_FRAMES;
+
+	Library *_library = nullptr;
 };
 }
 

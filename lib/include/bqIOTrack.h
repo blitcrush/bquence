@@ -43,8 +43,7 @@ public:
 	static constexpr ma_uint64 PRELOAD_NUM_FRAMES = PRELOADER_NUM_FRAMES;
 
 private:
-	AudioClipPreload _preload(const std::string &filename,
-		ma_uint64 first_frame);
+	AudioClipPreload _preload(unsigned int song_id, ma_uint64 first_frame);
 
 	std::vector<AudioClip> _clips;
 	std::vector<float *> _old_preloads;
