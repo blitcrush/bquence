@@ -42,7 +42,7 @@ public:
 
 private:
 	void _decode_next_cache_chunks(unsigned int playhead_idx,
-		unsigned int track_idx);
+		unsigned int track_idx, double playhead_beat);
 
 	bool _is_track_valid(unsigned int track_idx);
 	bool _is_playhead_valid(unsigned int playhead_idx);

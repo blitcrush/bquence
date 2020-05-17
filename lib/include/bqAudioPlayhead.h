@@ -53,7 +53,7 @@ public:
 private:
 	void _setup_soundtouch(HANDLE &st);
 
-	ma_uint64 _pull(unsigned int track_idx, AudioClip &clip, float *dest,
+	void _pull(unsigned int track_idx, AudioClip &clip, float *dest,
 		ma_uint64 num_frames);
 
 	static constexpr unsigned int _NUM_TRACKS = WORLD_NUM_TRACKS;
@@ -70,6 +70,8 @@ private:
 	void _copy_frames(float *dest, float *src, ma_uint64 dest_first_frame,
 		ma_uint64 src_first_frame, ma_uint64 num_frames,
 		ma_uint64 num_channels);
+	void _fill_silence(float *dest, ma_uint64 first_frame,
+		ma_uint64 num_frames, ma_uint64 num_channels);
 
 	void _delete_chunk(PlayheadChunk *chunk);
 	void _pop_chunk(_ChunksList &chunks);

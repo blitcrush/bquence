@@ -30,9 +30,11 @@ void IOEngine::decode_next_cache_chunks()
 	}
 
 	for (unsigned int i = 0; i < _NUM_PLAYHEADS; ++i) {
+		double playhead_beat = _audio->get_playhead_beat(i);
+
 		for (unsigned int j = 0; j < _NUM_TRACKS; ++j) {
 			if (_tracks[j].num_clips() > 0) {
-				_decode_next_cache_chunks(i, j);
+				_decode_next_cache_chunks(i, j, playhead_beat);
 			}
 		}
 	}
@@ -212,7 +214,7 @@ void IOEngine::notify_audio_playhead_jumped(unsigned int playhead)
 }
 
 void IOEngine::_decode_next_cache_chunks(unsigned int playhead_idx,
-	unsigned int track_idx)
+	unsigned int track_idx, double playhead_beat)
 {
 	if (_playheads[playhead_idx].block_decode) {
 		return;
@@ -222,7 +224,6 @@ void IOEngine::_decode_next_cache_chunks(unsigned int playhead_idx,
 		track_idx);
 	unsigned int song_id = _audio->get_playhead_cur_song_id(playhead_idx,
 		track_idx);
-	double playhead_beat = _audio->get_playhead_beat(playhead_idx);
 
 	IOTrack &track = _tracks[track_idx];
 	if (!track.is_clip_valid(clip_idx) ||
@@ -245,14 +246,9 @@ void IOEngine::_decode_next_cache_chunks(unsigned int playhead_idx,
 		return;
 	}
 
-	ma_uint64 min_from_frame = clip.first_frame +
-		IOTrack::PRELOAD_NUM_FRAMES;
 	ma_uint64 decode_from_frame = clip.first_frame +
 		_library->beats_to_out_samples(song_id,
 			playhead_beat - clip.start);
-	if (decode_from_frame < min_from_frame) {
-		decode_from_frame = min_from_frame;
-	}
 
 	IOAudioFileDecoder &decoder = _decoders[playhead_idx][track_idx];
 	decoder.set_clip_idx(clip_idx, clip);

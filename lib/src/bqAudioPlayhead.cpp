@@ -70,16 +70,8 @@ ma_uint64 AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
 
 	while (total_num_received < num_frames) {
 		if (soundtouch_numSamples(st) == 0) {
-			ma_uint64 num_want = _NUM_ST_SRC_FRAMES; // for clarity
-			ma_uint64 num_pulled = _pull(track_idx, clip, _st_src,
-				num_want);
-			if (num_pulled > 0) {
-				soundtouch_putSamples(st, _st_src,
-					static_cast<unsigned int>(num_pulled));
-			}
-			if (num_pulled < num_want) {
-				pull_failed = true;
-			}
+			_pull(track_idx, clip, _st_src, _NUM_ST_SRC_FRAMES);
+			soundtouch_putSamples(st, _st_src, _NUM_ST_SRC_FRAMES);
 		}
 
 		unsigned int max_num_receive = static_cast<unsigned int>(
@@ -214,8 +206,8 @@ void AudioPlayhead::_setup_soundtouch(HANDLE &st)
 	soundtouch_setTempo(st, 1.0f);
 }
 
-ma_uint64 AudioPlayhead::_pull(unsigned int track_idx, AudioClip &clip,
-	float *dest, ma_uint64 num_frames)
+void AudioPlayhead::_pull(unsigned int track_idx, AudioClip &clip, float *dest,
+	ma_uint64 num_frames)
 {
 	ma_uint64 initial_want_frame = _cache[track_idx].cur_want_frame;
 	ma_uint64 num_pulled = clip.pull_preload(dest, initial_want_frame,
@@ -261,7 +253,23 @@ ma_uint64 AudioPlayhead::_pull(unsigned int track_idx, AudioClip &clip,
 
 	_cache[track_idx].cur_want_frame = initial_want_frame + num_frames;
 
-	return num_pulled;
+	if (num_pulled < num_frames) {
+		// Passing silence to SoundTouch when we don't have any data is
+		// necessary to keeping multiple tracks in sync (so that the
+		// latency between each SoundTouch instance is consistent even
+		// if some tracks' clips decoded more quickly than others).
+		// Thus, if we don't have enough samples to fill the whole
+		// buffer, we fill the remaining part with silence.
+		_fill_silence(dest, num_pulled, num_frames - num_pulled,
+			_num_channels);
+
+		// TODO: It would be nice to output some kind of flag (perhaps
+		// "return false" or something) indicating that this conditional
+		// (num_pulled < num_frames) was reached. Then, inside the
+		// "pull_stretch" function, we should perform a slight fade-in
+		// so that, when an audio track transitions from unavailable to
+		// loaded, there is no popping noise.
+	}
 }
 
 void AudioPlayhead::_copy_frames(float *dest, float *src,
@@ -277,6 +285,15 @@ void AudioPlayhead::_copy_frames(float *dest, float *src,
 
 			dest[dest_idx] = src[src_idx];
 		}
+	}
+}
+
+void AudioPlayhead::_fill_silence(float *dest, ma_uint64 first_frame,
+	ma_uint64 num_frames, ma_uint64 num_channels)
+{
+	ma_uint64 ofs = first_frame * num_channels;
+	for (ma_uint64 i = 0; i < num_frames * num_channels; ++i) {
+		dest[ofs + i] = 0.0f;
 	}
 }
 
