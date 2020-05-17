@@ -60,10 +60,18 @@ ma_uint64 AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
 		_needs_seek[track_idx] = false;
 	}
 
-	// TODO: Does updating these values have any performance impact? Should
-	// they only be set on the SoundTouch instance if they have changed?
-	soundtouch_setPitchSemiTones(st, static_cast<float>(clip.pitch_shift));
-	soundtouch_setTempo(st, static_cast<float>(master_bpm / song_bpm));
+	_TrackStInfo &st_info = _st_info[track_idx];
+	if (!st_info.valid || st_info.last_pitch != clip.pitch_shift) {
+		soundtouch_setPitchSemiTones(st, static_cast<float>(
+			clip.pitch_shift));
+		st_info.last_pitch = clip.pitch_shift;
+	}
+	double tempo_shift = master_bpm / song_bpm;
+	if (!st_info.valid || st_info.last_tempo != tempo_shift) {
+		soundtouch_setTempo(st, static_cast<float>(tempo_shift));
+		st_info.last_tempo = tempo_shift;
+	}
+	st_info.valid = true;
 
 	ma_uint64 total_num_received = 0;
 	bool pull_failed = false;
@@ -192,18 +200,27 @@ void AudioPlayhead::_setup_soundtouch(HANDLE &st)
 		soundtouch_clear(st);
 	} else {
 		st = soundtouch_createInstance();
+
+		// 2 = SETTING_USE_QUICKSEEK
+		soundtouch_setSetting(st, 2,
+			bq::TIMESTRETCH_USE_QUICKSEEK ? 1 : 0);
+		// 3 = SETTING_SEQUENCE_MS
+		soundtouch_setSetting(st, 3, bq::TIMESTRETCH_SEQUENCE_MS);
+		// 4 = SETTING_SEEKWINDOW_MS
+		soundtouch_setSetting(st, 4, bq::TIMESTRETCH_SEEKWINDOW_MS);
+		// 5 = SETTING_OVERLAP_MS
+		soundtouch_setSetting(st, 5, bq::TIMESTRETCH_OVERLAP_MS);
 	}
 
 	soundtouch_setChannels(st, _num_channels);
 	soundtouch_setSampleRate(st, _sample_rate);
 
-	// TODO: Determine optimal quality/performance settings (i.e. quickseek,
-	// anti-aliasing, etc).
-
 	soundtouch_setTempo(st, 0.1f);
 	soundtouch_putSamples(st, _st_src, _NUM_ST_SRC_FRAMES);
 	soundtouch_clear(st);
 	soundtouch_setTempo(st, 1.0f);
+
+	_st_info->valid = false;
 }
 
 void AudioPlayhead::_pull(unsigned int track_idx, AudioClip &clip, float *dest,

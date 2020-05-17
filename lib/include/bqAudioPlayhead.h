@@ -57,6 +57,11 @@ private:
 		ma_uint64 num_frames);
 
 	static constexpr unsigned int _NUM_TRACKS = WORLD_NUM_TRACKS;
+	struct _TrackStInfo {
+		double last_pitch = 0.0;
+		double last_tempo = 0.0;
+		bool valid = false;
+	};
 	struct _ChunksList {
 		PlayheadChunk *head = nullptr, *tail = nullptr;
 		ma_uint64 cur_want_frame = 0;
@@ -83,13 +88,21 @@ private:
 
 	std::atomic<double> _beat = 0.0;
 
-	// Thank you Mixxx developers for figuring this out!
+	// Thank you Mixxx developers for figuring this number out!
 	// https://github.com/mixxxdj/mixxx/blob/master/src/engine/bufferscalers/enginebufferscalest.cpp#L25
+	//
+	// TODO: At some point, perhaps setting this to a value higher than
+	// necessary (to ensure _st_src is allocated large enough), and then
+	// using SETTING_INITIAL_LATENCY (if SoundTouch instance was cleared) or
+	// SETTING_NOMINAL_INPUT_SEQUENCE (if SoundTouch instance was not
+	// cleared) inside pull_stretch's while loop, rather than
+	// _NUM_ST_SRC_FRAMES, would be optimal.
 	static constexpr unsigned int _NUM_ST_SRC_FRAMES = 519;
 	float *_st_src = nullptr;
 
 	HANDLE _st[_NUM_TRACKS] = { nullptr };
 
+	_TrackStInfo _st_info[_NUM_TRACKS];
 	_ChunksList _cache[_NUM_TRACKS];
 	_LastClipInfo _last_clips[_NUM_TRACKS];
 	std::atomic<unsigned int> _cur_clip_idxs[_NUM_TRACKS] = { 0 };
