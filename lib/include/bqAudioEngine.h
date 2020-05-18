@@ -43,6 +43,8 @@ public:
 	// AudioPlayhead uses only atomic variables to track this state, so we
 	// don't need to pass messages here...
 	double get_playhead_beat(unsigned int playhead_idx);
+	ma_uint64 get_cur_want_frame(unsigned int playhead_idx,
+		unsigned int track_idx);
 	unsigned int get_playhead_cur_clip_idx(unsigned int playhead_idx,
 		unsigned int track_idx);
 	unsigned int get_playhead_cur_song_id(unsigned int playhead_idx,

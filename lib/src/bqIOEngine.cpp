@@ -30,11 +30,9 @@ void IOEngine::decode_next_cache_chunks()
 	}
 
 	for (unsigned int i = 0; i < _NUM_PLAYHEADS; ++i) {
-		double playhead_beat = _audio->get_playhead_beat(i);
-
 		for (unsigned int j = 0; j < _NUM_TRACKS; ++j) {
 			if (_tracks[j].num_clips() > 0) {
-				_decode_next_cache_chunks(i, j, playhead_beat);
+				_decode_next_cache_chunks(i, j);
 			}
 		}
 	}
@@ -214,7 +212,7 @@ void IOEngine::notify_audio_playhead_jumped(unsigned int playhead)
 }
 
 void IOEngine::_decode_next_cache_chunks(unsigned int playhead_idx,
-	unsigned int track_idx, double playhead_beat)
+	unsigned int track_idx)
 {
 	if (_playheads[playhead_idx].block_decode) {
 		return;
@@ -241,21 +239,20 @@ void IOEngine::_decode_next_cache_chunks(unsigned int playhead_idx,
 	// anything (because it's not actually playing - it's just cued or
 	// something). This would need to be fixed later when implementing clip
 	// looping.
+	double playhead_beat = _audio->get_playhead_beat(playhead_idx);
 	if (clip.end - clip.start < 1.0 ||
 		playhead_beat < clip.start || playhead_beat >= clip.end) {
 		return;
 	}
 
-	ma_uint64 decode_from_frame = clip.first_frame +
-		_library->beats_to_out_samples(song_id,
-			playhead_beat - clip.start);
-
 	IOAudioFileDecoder &decoder = _decoders[playhead_idx][track_idx];
 	decoder.set_clip_idx(clip_idx, clip);
 	decoder.set_song_id(song_id);
 
+	ma_uint64 cur_want_frame = _audio->get_cur_want_frame(playhead_idx,
+		track_idx);
 	PlayheadChunk *chunk = nullptr;
-	while (chunk = decoder.decode(decode_from_frame)) {
+	while (chunk = decoder.decode(cur_want_frame)) {
 		_audio->receive_playhead_chunk(playhead_idx, track_idx, chunk);
 	}
 }

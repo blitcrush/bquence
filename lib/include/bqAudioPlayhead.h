@@ -30,6 +30,7 @@ public:
 	void receive_chunk(unsigned int track, PlayheadChunk *chunk);
 
 	double get_beat();
+	ma_uint64 get_cur_want_frame(unsigned int track_idx);
 	void advance(double beats);
 	// Causes free; must only be called within the audio thread
 	void jump(double beat);
@@ -64,7 +65,7 @@ private:
 	};
 	struct _ChunksList {
 		PlayheadChunk *head = nullptr, *tail = nullptr;
-		ma_uint64 cur_want_frame = 0;
+		std::atomic<ma_uint64> cur_want_frame = 0;
 	};
 	struct _LastClipInfo {
 		double start = -1.0;

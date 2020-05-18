@@ -22,10 +22,7 @@ void IOAudioFileDecoder::set_clip_idx(unsigned int clip_idx,
 	const AudioClip &cur_clip)
 {
 	if (!_last_clip_idx_valid || clip_idx != _last_clip_idx) {
-		if (_needs_reset_next_frame(cur_clip)) {
-			_reset_next_send_frame();
-		}
-
+		_reset_next_send_frame();
 		_last_clip_idx = clip_idx;
 		_last_clip_idx_valid = true;
 	}
@@ -35,6 +32,9 @@ void IOAudioFileDecoder::set_song_id(unsigned int song_id)
 {
 	if (!_last_song_id_valid || song_id != _last_song_id) {
 		_open_file(song_id);
+
+		_reset_next_send_frame();
+
 		_last_song_id = song_id;
 		_last_song_id_valid = true;
 	}
@@ -121,48 +121,6 @@ void IOAudioFileDecoder::_reset_next_send_frame()
 	_next_send_frame_valid = false;
 
 	_end_of_song = false;
-}
-
-bool IOAudioFileDecoder::_needs_reset_next_frame(const AudioClip &cur_clip)
-{
-	bool needs_reset_next_frame = true;
-
-	if (_library && _last_clip_valid) {
-		if (cur_clip.song_id == _last_clip.song_id) {
-			ma_uint64 frames_delta = llabs(static_cast<ma_int64>(
-				cur_clip.first_frame) - static_cast<ma_int64>(
-					_last_clip.first_frame));
-
-			double beats_delta = fabs(cur_clip.start -
-				_last_clip.start);
-
-			ma_uint64 beats_delta_to_frames =
-				_library->beats_to_out_samples(cur_clip.song_id,
-					beats_delta);
-
-			ma_uint64 beats_frames_delta = llabs(
-				static_cast<ma_int64>(beats_delta_to_frames) -
-				static_cast<ma_int64>(frames_delta));
-
-			// Accounts for floating-point (double) precision errors
-			// An error of only two frames with the benefit of no
-			// audio dropout is completely tolerable in most
-			// situations.
-			constexpr ma_uint64 BEATS_FRAMES_DELTA_TOLERANCE = 2;
-
-			if (beats_frames_delta <=
-				BEATS_FRAMES_DELTA_TOLERANCE) {
-				needs_reset_next_frame = false;
-			}
-		}
-	}
-
-	_last_clip.start = cur_clip.start;
-	_last_clip.first_frame = cur_clip.first_frame;
-	_last_clip.song_id = cur_clip.song_id;
-	_last_clip_valid = true;
-
-	return needs_reset_next_frame;
 }
 
 void IOAudioFileDecoder::_open_file(unsigned int song_id)

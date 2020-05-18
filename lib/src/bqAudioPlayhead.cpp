@@ -97,10 +97,10 @@ ma_uint64 AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
 	return total_num_received;
 }
 
-void AudioPlayhead::receive_chunk(unsigned int track, PlayheadChunk *chunk)
+void AudioPlayhead::receive_chunk(unsigned int track_idx, PlayheadChunk *chunk)
 {
-	if (_is_track_valid(track)) {
-		_ChunksList &chunks = _cache[track];
+	if (_is_track_valid(track_idx)) {
+		_ChunksList &chunks = _cache[track_idx];
 		if (chunks.tail) {
 			chunks.tail->next = chunk;
 			chunks.tail = chunk;
@@ -116,6 +116,15 @@ void AudioPlayhead::receive_chunk(unsigned int track, PlayheadChunk *chunk)
 double AudioPlayhead::get_beat()
 {
 	return _beat;
+}
+
+ma_uint64 AudioPlayhead::get_cur_want_frame(unsigned int track_idx)
+{
+	if (_is_track_valid(track_idx)) {
+		return _cache[track_idx].cur_want_frame;
+	} else {
+		return 0;
+	}
 }
 
 void AudioPlayhead::jump(double beat)

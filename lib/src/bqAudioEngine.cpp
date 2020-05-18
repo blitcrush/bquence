@@ -261,6 +261,16 @@ double AudioEngine::get_playhead_beat(unsigned int playhead_idx)
 	}
 }
 
+ma_uint64 AudioEngine::get_cur_want_frame(unsigned int playhead_idx,
+	unsigned int track_idx)
+{
+	if (_is_playhead_valid(playhead_idx)) {
+		return _playheads[playhead_idx].get_cur_want_frame(track_idx);
+	} else {
+		return 0;
+	}
+}
+
 unsigned int AudioEngine::get_playhead_cur_clip_idx(unsigned int playhead_idx,
 	unsigned int track_idx)
 {
