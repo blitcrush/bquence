@@ -27,13 +27,8 @@ void audio_callback(ma_device *device, void *out_frames,
 	// Handle all messages in the audio engine's queue
 	world->pump_audio_thread();
 
-	// Zero the output buffer
-	float *float_frames = static_cast<float *>(out_frames);
-	for (ma_uint32 i = 0; i < num_frames * device->playback.channels; ++i) {
-		float_frames[i] = 0.0f;
-	}
-
 	// Render audio from the first playhead and the first track
+	float *float_frames = static_cast<float *>(out_frames);
 	world->pull_audio(0, 0, float_frames, num_frames);
 
 	// Advance the first playhead according to the number of frames that

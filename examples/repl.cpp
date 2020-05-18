@@ -19,20 +19,11 @@ struct IOThreadUserData {
 	bool running = false;
 };
 
-void clear_frames(float *frames, ma_uint64 num_frames, ma_uint32 num_channels)
-{
-	for (ma_uint64 i = 0; i < num_frames * num_channels; ++i) {
-		frames[i] = 0.0f;
-	}
-}
-
 void render_playhead_track(float *out_frames, float *tmp_frames,
 	bq::World *world, ma_uint32 num_channels, ma_uint32 channel_stride,
 	unsigned int playhead, unsigned int track, float gain,
 	ma_uint32 num_frames)
 {
-	clear_frames(tmp_frames, num_frames, num_channels);
-
 	world->pull_audio(playhead, track, tmp_frames, num_frames);
 
 	for (ma_uint32 i = 0; i < num_frames; ++i) {
@@ -46,7 +37,6 @@ void audio_callback(ma_device *device, void *out_frames, const void *in_frames,
 {
 	ma_uint32 num_channels = device->playback.channels;
 	float *float_out_frames = static_cast<float *>(out_frames);
-	clear_frames(float_out_frames, num_frames, num_channels);
 
 	if (!device->pUserData) {
 		return;
