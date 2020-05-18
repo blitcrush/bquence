@@ -72,6 +72,9 @@ private:
 	void _update_cur_clip_idx(unsigned int playhead_idx,
 		unsigned int track_idx);
 
+	void _fill_silence(float *dest, ma_uint64 first_frame,
+		ma_uint64 num_frames, ma_uint64 num_channels);
+
 	std::atomic<unsigned int> _num_channels = 0;
 	std::atomic<unsigned int> _sample_rate = 0;
 	std::atomic<double> _bpm = 0.0;

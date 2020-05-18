@@ -42,6 +42,7 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 {
 	if (!_library || !_is_playhead_valid(playhead_idx) ||
 		!_is_track_valid(track_idx)) {
+		_fill_silence(dest, 0, num_frames, _num_channels);
 		return;
 	}
 
@@ -49,6 +50,7 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 	AudioClipsArray &track = _tracks[track_idx];
 
 	if (track.num_clips < 1) {
+		_fill_silence(dest, 0, num_frames, _num_channels);
 		return;
 	}
 
@@ -60,6 +62,7 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 
 	unsigned int first_clip = playhead.get_cur_clip_idx(track_idx);
 	if (!track.is_clip_valid(first_clip)) {
+		_fill_silence(dest, 0, num_frames, _num_channels);
 		return;
 	}
 	unsigned int last_clip = first_clip;
@@ -72,6 +75,7 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 		}
 	}
 
+	ma_uint64 prev_last_frame_ofs = 0;
 	for (unsigned int i = first_clip; i <= last_clip; ++i) {
 		AudioClip &clip = track.clips[i];
 
@@ -113,10 +117,26 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 			_library->beats_to_out_samples(clip.song_id,
 				first_beat - clip.start);
 
-		float *cur_dest = dest + (clip_first_frame_ofs * _num_channels);
+		if (prev_last_frame_ofs < clip_first_frame_ofs) {
+			ma_uint64 silence_num_frames = clip_first_frame_ofs -
+				prev_last_frame_ofs;
+			_fill_silence(dest, prev_last_frame_ofs,
+				silence_num_frames, _num_channels);
+		}
 
+		float *pull_dest = dest + (clip_first_frame_ofs *
+			_num_channels);
 		_playheads[playhead_idx].pull_stretch(_bpm, track_idx, i, clip,
-			song_bpm, cur_dest, song_first_frame, clip_num_frames);
+			song_bpm, pull_dest, song_first_frame,
+			clip_num_frames);
+
+		prev_last_frame_ofs = clip_last_frame_ofs;
+	}
+	if (prev_last_frame_ofs < num_frames) {
+		ma_uint64 silence_num_frames = num_frames -
+			prev_last_frame_ofs;
+		_fill_silence(dest, prev_last_frame_ofs,
+			silence_num_frames, _num_channels);
 	}
 }
 
@@ -438,6 +458,15 @@ void AudioEngine::_update_cur_clip_idx(unsigned int playhead_idx,
 		AudioClip &cur_clip = track.clips[cur_clip_idx];
 		playhead.set_cur_clip_idx(track_idx, cur_clip_idx, cur_clip);
 		playhead.set_cur_song_id(track_idx, cur_clip.song_id);
+	}
+}
+
+void AudioEngine::_fill_silence(float *dest, ma_uint64 first_frame,
+	ma_uint64 num_frames, ma_uint64 num_channels)
+{
+	ma_uint64 ofs = first_frame * num_channels;
+	for (ma_uint64 i = 0; i < num_frames * num_channels; ++i) {
+		dest[ofs + i] = 0.0f;
 	}
 }
 }
