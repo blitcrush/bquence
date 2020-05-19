@@ -46,6 +46,13 @@ PlayheadChunk *IOAudioFileDecoder::decode(ma_uint64 from_frame)
 		return nullptr;
 	}
 
+	// If we skipped chunks (e.g. clip's sample offset was adjusted), reset
+	// the next send frame rather to from_frame rather than decoding
+	// everything in between (because those chunks won't be used)...
+	if (from_frame > _next_send_frame + _SEND_FRAME_WINDOW) {
+		_reset_next_send_frame();
+	}
+
 	ma_uint64 needs_chunk_threshold = _next_send_frame;
 	// This if statement is necessary because these are *unsigned* ints - we
 	// wouldn't want them to wrap around to a huge number if we subtracted
