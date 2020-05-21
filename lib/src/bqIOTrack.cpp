@@ -12,8 +12,9 @@ void IOTrack::bind_library(Library *library)
 	_library = library;
 }
 
-void IOTrack::insert_clip(double start, double end, unsigned int song_id,
-	ma_uint64 first_frame, double pitch_shift)
+void IOTrack::insert_clip(double start, double end, double fade_in,
+	double fade_out, unsigned int song_id, ma_uint64 first_frame,
+	double pitch_shift)
 {
 	erase_clips_range(start, end);
 
@@ -31,6 +32,8 @@ void IOTrack::insert_clip(double start, double end, unsigned int song_id,
 	clip.song_id = song_id;
 	clip.start = start;
 	clip.end = end;
+	clip.fade_in = fade_in;
+	clip.fade_out = fade_out;
 	clip.pitch_shift = pitch_shift;
 	clip.first_frame = _library->samples_self2out(clip.song_id,
 		first_frame);

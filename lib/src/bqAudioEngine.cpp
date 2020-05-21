@@ -130,6 +130,39 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 			song_bpm, pull_dest, song_first_frame,
 			clip_num_frames);
 
+		// Fade in
+		double fade_in_last_beat = clip.start + clip.fade_in;
+		if (first_beat < fade_in_last_beat) {
+			ma_uint64 fade_num_frames = beats_to_samples(
+				clip.fade_in);
+			ma_uint64 dest_num_frames = _min(clip_num_frames,
+				fade_num_frames);
+			float *fade_dest = dest + (clip_first_frame_ofs *
+				_num_channels);
+			float fade_base = static_cast<float>(
+				(first_beat - clip.start) / clip.fade_in);
+			_fade(fade_dest, dest_num_frames,
+				static_cast<float>(fade_num_frames), fade_base,
+				false);
+		}
+
+		// Fade out
+		double fade_out_first_beat = clip.end - clip.fade_out;
+		if (last_beat > fade_out_first_beat) {
+			ma_uint64 fade_num_frames = beats_to_samples(
+				clip.fade_out);
+			ma_uint64 dest_num_frames = _min(clip_num_frames,
+				fade_num_frames);
+			float *fade_dest = dest +
+				((clip_last_frame_ofs - dest_num_frames) *
+					_num_channels);
+			float fade_base = static_cast<float>(
+				(clip.end - first_beat) / clip.fade_out);
+			_fade(fade_dest, dest_num_frames,
+				static_cast<float>(fade_num_frames), fade_base,
+				true);
+		}
+
 		prev_last_frame_ofs = clip_last_frame_ofs;
 	}
 	if (prev_last_frame_ofs < num_frames) {
@@ -328,6 +361,25 @@ ma_uint64 AudioEngine::beats_to_samples(double beats)
 double AudioEngine::samples_to_beats(double samples)
 {
 	return samples * _samples_to_beats;
+}
+
+void AudioEngine::_fade(float *dest, ma_uint64 dest_num_frames,
+	float total_num_frames, float initial_x, bool reverse)
+{
+	for (ma_uint64 i = 0; i < dest_num_frames; ++i) {
+		float x = static_cast<float>(i) / total_num_frames;
+		x = reverse ? initial_x - x : initial_x + x;
+		x = _clamp(_sigmoid_0_to_1(x), 0.0f, 1.0f);
+		for (ma_uint64 j = 0; j < _num_channels; ++j) {
+			dest[i * _num_channels + j] *= x;
+		}
+	}
+}
+
+float AudioEngine::_sigmoid_0_to_1(float x)
+{
+	x -= 0.5f;
+	return 0.5f + 1.5f * (x / (1.0f + abs(x)));
 }
 
 void AudioEngine::_recalc_beats_samples_conversion_factors()

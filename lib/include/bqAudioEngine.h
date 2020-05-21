@@ -14,6 +14,8 @@
 #include <QwMpscFifoQueue.h>
 #include <QwNodePool.h>
 
+#include <cmath>
+
 namespace bq {
 class IOEngine;
 
@@ -60,6 +62,10 @@ public:
 	double samples_to_beats(double samples);
 
 private:
+	void _fade(float *dest, ma_uint64 dest_num_frames,
+		float total_num_frames, float initial_x, bool reverse);
+	float _sigmoid_0_to_1(float x);
+
 	void _recalc_beats_samples_conversion_factors();
 
 	bool _is_track_valid(unsigned int track_idx);
@@ -76,6 +82,18 @@ private:
 
 	void _fill_silence(float *dest, ma_uint64 first_frame,
 		ma_uint64 num_frames, ma_uint64 num_channels);
+
+	template<class T>
+	constexpr const T &_min(const T &a, const T &b)
+	{
+		return (a < b) ? a : b;
+	}
+
+	template<class T>
+	constexpr const T &_clamp(const T &x, const T &a, const T &b)
+	{
+		return (x < a) ? a : (x > b) ? b : x;
+	}
 
 	std::atomic<unsigned int> _num_channels = 0;
 	std::atomic<unsigned int> _sample_rate = 0;

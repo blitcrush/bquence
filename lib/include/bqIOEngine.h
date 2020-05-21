@@ -29,8 +29,8 @@ public:
 	void handle_all_msgs();
 
 	void insert_clip(unsigned int track, double start, double end,
-		unsigned int song_id, ma_uint64 first_frame,
-		double pitch_shift);
+		double fade_in, double fade_out, unsigned int song_id,
+		ma_uint64 first_frame, double pitch_shift);
 	void erase_clips_range(unsigned int track, double from, double to);
 
 	void delete_clips(AudioClipsArray clips);

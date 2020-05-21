@@ -26,6 +26,7 @@ struct IOMsgInsertClip {
 	unsigned int track;
 	unsigned int song_id;
 	double start, end;
+	double fade_in, fade_out;
 	double pitch_shift;
 	ma_uint64 first_frame;
 };

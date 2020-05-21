@@ -23,8 +23,9 @@ public:
 
 	void bind_library(Library *library);
 
-	void insert_clip(double start, double end, unsigned int song_id,
-		ma_uint64 first_frame, double pitch_shift);
+	void insert_clip(double start, double end, double fade_in,
+		double fade_out, unsigned int song_id, ma_uint64 first_frame,
+		double pitch_shift);
 	void erase_clips_range(double from, double to);
 
 	//

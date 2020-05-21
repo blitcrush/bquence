@@ -26,8 +26,9 @@ public:
 		double bpm);
 
 	void insert_clip(unsigned int track_idx, double start_beat,
-		double end_beat, double pitch_shift_semitones,
-		ma_uint64 first_frame, unsigned int song_id);
+		double end_beat, double fade_in_beats, double fade_out_beats,
+		double pitch_shift_semitones, ma_uint64 first_frame,
+		unsigned int song_id);
 	void erase_clips_range(unsigned int track_idx, double from_beat,
 		double to_beat);
 

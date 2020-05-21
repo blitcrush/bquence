@@ -15,6 +15,7 @@ public:
 		ma_uint64 num_pull_frames);
 
 	double start = -1.0, end = -1.0; // Measured in beats
+	double fade_in = 0.0, fade_out = 0.0; // Measured in beats
 	double pitch_shift = 0.0; // Measured in semitones
 	ma_uint64 first_frame = 0;
 	unsigned int song_id = 0;

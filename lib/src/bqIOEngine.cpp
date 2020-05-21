@@ -147,7 +147,8 @@ void IOEngine::handle_all_msgs()
 }
 
 void IOEngine::insert_clip(unsigned int track, double start, double end,
-	unsigned int song_id, ma_uint64 first_frame, double pitch_shift)
+	double fade_in, double fade_out, unsigned int song_id,
+	ma_uint64 first_frame, double pitch_shift)
 {
 	IOMsg *msg = _msg_pool->allocate();
 	msg->type = IOMsgType::INSERT_CLIP;
@@ -155,6 +156,8 @@ void IOEngine::insert_clip(unsigned int track, double start, double end,
 	msg->contents.insert_clip.song_id = song_id;
 	msg->contents.insert_clip.start = start;
 	msg->contents.insert_clip.end = end;
+	msg->contents.insert_clip.fade_in = fade_in;
+	msg->contents.insert_clip.fade_out = fade_out;
 	msg->contents.insert_clip.pitch_shift = pitch_shift;
 	msg->contents.insert_clip.first_frame = first_frame;
 	_msg_queue.push(msg);
@@ -270,8 +273,9 @@ bool IOEngine::_is_playhead_valid(unsigned int playhead_idx)
 void IOEngine::_handle_insert_clip(IOMsgInsertClip &msg)
 {
 	if (_is_track_valid(msg.track)) {
-		_tracks[msg.track].insert_clip(msg.start, msg.end, msg.song_id,
-			msg.first_frame, msg.pitch_shift);
+		_tracks[msg.track].insert_clip(msg.start, msg.end, msg.fade_in,
+			msg.fade_out, msg.song_id, msg.first_frame,
+			msg.pitch_shift);
 		_track_dirty[msg.track] = true;
 	}
 }

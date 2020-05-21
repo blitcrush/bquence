@@ -10,6 +10,7 @@
 #include <SoundTouchDLL.h>
 
 #include <atomic>
+#include <cmath>
 
 namespace bq {
 class IOEngine;
@@ -84,6 +85,8 @@ private:
 	void _pop_all_chunks(unsigned int track_idx);
 
 	bool _needs_pop_and_seek(unsigned int track_idx, AudioClip &cur_clip);
+
+	bool _is_approx_equal(double a, double b);
 
 	bool _is_track_valid(unsigned int track_idx);
 

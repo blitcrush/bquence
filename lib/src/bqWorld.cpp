@@ -79,12 +79,14 @@ unsigned int World::add_song(const std::string &filename, double sample_rate,
 }
 
 void World::insert_clip(unsigned int track_idx, double start_beat,
-	double end_beat, double pitch_shift_semitones, ma_uint64 first_frame,
+	double end_beat, double fade_in_beats, double fade_out_beats,
+	double pitch_shift_semitones, ma_uint64 first_frame,
 	unsigned int song_id)
 {
 	if (_io) {
-		_io->insert_clip(track_idx, start_beat, end_beat, song_id,
-			first_frame, pitch_shift_semitones);
+		_io->insert_clip(track_idx, start_beat, end_beat, fade_in_beats,
+			fade_out_beats, song_id, first_frame,
+			pitch_shift_semitones);
 	}
 }
 

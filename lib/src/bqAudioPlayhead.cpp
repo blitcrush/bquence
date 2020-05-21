@@ -24,7 +24,8 @@ void AudioPlayhead::set_playback_config(ma_uint32 num_channels,
 		delete[] _st_src;
 	}
 
-	_st_src = new float[_NUM_ST_SRC_FRAMES * num_channels];
+	_st_src = new float[static_cast<ma_uint64>(_NUM_ST_SRC_FRAMES) *
+		num_channels];
 
 	for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
 		_setup_soundtouch(_st[i]);
@@ -73,24 +74,46 @@ ma_uint64 AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
 	}
 	st_info.valid = true;
 
+	bool bypass_stretch = _is_approx_equal(st_info.last_pitch, 0.0) &&
+		_is_approx_equal(st_info.last_tempo, 1.0);
 	ma_uint64 total_num_received = 0;
-	bool pull_failed = false;
-
-	while (total_num_received < num_frames) {
-		if (soundtouch_numSamples(st) == 0) {
-			_pull(track_idx, clip, _st_src, _NUM_ST_SRC_FRAMES);
-			soundtouch_putSamples(st, _st_src, _NUM_ST_SRC_FRAMES);
+	if (bypass_stretch) {
+		ma_uint64 num_st_frames = static_cast<ma_uint64>(
+			soundtouch_numSamples(st));
+		if (num_st_frames > num_frames) {
+			num_st_frames = num_frames;
+		}
+		if (num_st_frames > 0) {
+			soundtouch_receiveSamples(st, dest,
+				static_cast<unsigned int>(num_st_frames));
 		}
 
-		unsigned int max_num_receive = static_cast<unsigned int>(
-			num_frames - total_num_received);
-		float *cur_dest = dest + (total_num_received * _num_channels);
-		int cur_num_received = soundtouch_receiveSamples(st, cur_dest,
-			max_num_receive);
-		total_num_received += cur_num_received;
+		if (num_st_frames < num_frames) {
+			float *cur_dest = dest +
+				(num_st_frames * _num_channels);
+			_pull(track_idx, clip, cur_dest,
+				num_frames - num_st_frames);
+		}
 
-		if (cur_num_received == 0 && pull_failed) {
-			break;
+		total_num_received = num_frames;
+	} else {
+		while (total_num_received < num_frames) {
+			if (soundtouch_numSamples(st) == 0) {
+				_pull(track_idx, clip, _st_src,
+					_NUM_ST_SRC_FRAMES);
+				soundtouch_putSamples(st, _st_src,
+					_NUM_ST_SRC_FRAMES);
+			}
+
+			unsigned int max_num_receive =
+				static_cast<unsigned int>(
+					num_frames - total_num_received);
+			float *cur_dest = dest +
+				(total_num_received * _num_channels);
+			unsigned int cur_num_received =
+				soundtouch_receiveSamples(st, cur_dest,
+					max_num_receive);
+			total_num_received += cur_num_received;
 		}
 	}
 
@@ -407,6 +430,12 @@ bool AudioPlayhead::_needs_pop_and_seek(unsigned int track_idx,
 	_last_clips_valid[track_idx] = true;
 
 	return needs_pop_seek;
+}
+
+bool AudioPlayhead::_is_approx_equal(double a, double b)
+{
+	double diff = a - b;
+	return abs(diff) < 0.0000000001;
 }
 
 bool AudioPlayhead::_is_track_valid(unsigned int track_idx)
