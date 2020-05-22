@@ -92,15 +92,16 @@ void handle_insert(bq::World *world, std::string cmd_line)
 	std::string cmd_str;
 	unsigned int track = 0;
 	double start = 0.0, end = 0.0;
+	double fade_in = 0.0, fade_out = 0.0;
 	double pitch_shift = 0.0;
 	ma_uint64 first_frame = 0;
 	unsigned int song_id = 0;
 
-	stream >> cmd_str >> track >> start >> end >> pitch_shift >> first_frame
-		>> song_id;
+	stream >> cmd_str >> track >> start >> end >> fade_in >> fade_out >>
+		pitch_shift >> first_frame >> song_id;
 
-	world->insert_clip(track, start, end, pitch_shift, first_frame,
-		song_id);
+	world->insert_clip(track, start, end, fade_in, fade_out, pitch_shift,
+		first_frame, song_id);
 }
 
 void handle_erase_range(bq::World *world, std::string cmd_line)
@@ -245,7 +246,8 @@ channel, and the output of the second playhead is routed to the right channel)."
 	std::cout << "======" << std::endl;
 	std::cout << "Load song: l <filename> <sample rate> <BPM>" << std::endl;
 	std::cout << "Insert clip: i <track index> <start beat> <end beat> \
-<pitch shift> <first frame> <song ID>" << std::endl;
+<fade in length> <fade out length> <pitch shift> <first frame> <song ID>" <<
+	std::endl;
 	std::cout << "Erase range: e <track index> <from beat> <to beat>" <<
 		std::endl;
 	std::cout << "Toggle playhead: p <playhead index>" << std::endl;

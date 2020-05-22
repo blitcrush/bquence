@@ -1,6 +1,6 @@
-# [bquence](https://blitcrush.com/bquence/)
+# bquence
 
-[bquence](https://blitcrush.com/bquence/) is an audio file clip sequencing engine designed for professional use at [blitcrush](https://blitcrush.com). It's intended to be as small as possible and to fit conveniently inside any C++ project.
+bquence is an audio file clip sequencing engine designed for professional use at [blitcrush](https://blitcrush.com). It's intended to be as small as possible and to fit conveniently inside any C++ project.
 
 ## Features
 
@@ -15,7 +15,7 @@
 
 ## Getting Started & Documentation
 
-The [bquence online documentation](https://blitcrush.com/bquence/) contains a [quick-start tutorial](https://blitcrush.com/bquence/quick-start/) and [how-to reference/FAQ](https://blitcrush.com/bquence/how-to/), along with other more in-depth content. The [quick-start](https://blitcrush.com/bquence/quick-start/) is the recommended way for new users to familiarize themselves with bquence's usage, and the [how-to FAQ](https://blitcrush.com/bquence/how-to/) is ideal for anyone wondering how to implement a certain functionality with bquence.
+The [bquence wiki](./wiki) contains a [quick-start tutorial](./wiki/quick-start) and [how-to reference/FAQ](./wiki/how-to), along with other more in-depth content. The [quick-start](./wiki/quick-start) is the recommended way for new users to familiarize themselves with bquence's usage, and the [how-to FAQ](./wiki/how-to) is ideal for anyone wondering how to implement a certain functionality with bquence.
 
 ## Credits
 

@@ -90,8 +90,8 @@ int main(int argc, char *argv[])
 		100.0);
 
 	// Insert two clips into the arrangement
-	world->insert_clip(0, 0.0, 8.0, 1, 0, song_1_id);
-	world->insert_clip(0, 8.0, 16.0, -1, 0, song_2_id);
+	world->insert_clip(0, 0.0, 8.0, 0.125, 0.125, 1, 0, song_1_id);
+	world->insert_clip(0, 8.0, 16.0, 0.125, 0.125, -1, 0, song_2_id);
 
 	// Erase part of the sequence between those clips
 	world->erase_clips_range(0, 6.0, 10.0);
