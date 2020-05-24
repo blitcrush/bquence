@@ -8,8 +8,6 @@
 
 #include <miniaudio.h>
 
-#include <thread>
-
 namespace bq {
 class World {
 public:
@@ -39,7 +37,11 @@ public:
 	// SHould only be called from the IO thread and should be called at the
 	// beginning of every IO thread callback invocation as long as the
 	// engine needs to be alive
-	void pump_io_thread(bool should_sleep);
+	void pump_io_thread();
+
+	// Should only be called from the IO thread, for each active
+	// playhead/track combination, after pump_io_thread() has completed
+	void decode_chunks(unsigned int playhead_idx, unsigned int track_idx);
 
 	// Should only be called from the audio thread
 	void pull_audio(unsigned int playhead_idx, unsigned int track_idx,

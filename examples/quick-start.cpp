@@ -39,9 +39,11 @@ void audio_callback(ma_device *device, void *out_frames,
 void io_callback(IOUserData *user_data)
 {
 	while (user_data->running && user_data->world) {
-		// Handle all messages in the I/O engine's queue, and stream
-		// audio data from the disk if needed.
-		user_data->world->pump_io_thread(true);
+		user_data->world->pump_io_thread();
+
+		user_data->world->decode_chunks(0, 0);
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }
 

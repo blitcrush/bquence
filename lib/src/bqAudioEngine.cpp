@@ -116,6 +116,9 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 		ma_uint64 song_first_frame = clip.first_frame +
 			_library->beats_to_out_samples(clip.song_id,
 				first_beat - clip.start);
+		ma_uint64 song_next_first_frame = clip.first_frame +
+			_library->beats_to_out_samples(clip.song_id,
+				last_beat - clip.start);
 
 		if (prev_last_frame_ofs < clip_first_frame_ofs) {
 			ma_uint64 silence_num_frames = clip_first_frame_ofs -
@@ -128,7 +131,7 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 			_num_channels);
 		_playheads[playhead_idx].pull_stretch(_bpm, track_idx, i, clip,
 			song_bpm, pull_dest, song_first_frame,
-			clip_num_frames);
+			clip_num_frames, song_next_first_frame);
 
 		// Fade in
 		double fade_in_last_beat = clip.start + clip.fade_in;
@@ -412,9 +415,6 @@ void AudioEngine::_handle_receive_clips(AudioMsgReceiveClips &msg)
 		}
 
 		_tracks[msg.track] = msg.clips;
-		for (unsigned int i = 0; i < _NUM_PLAYHEADS; ++i) {
-			_playheads[i].invalidate_cur_clip_idx(msg.track);
-		}
 	} else {
 		if (_io) {
 			_io->delete_clips(msg.clips);
@@ -452,8 +452,7 @@ void AudioEngine::_handle_receive_cur_clip_idx(AudioMsgReceiveCurClipIdx &msg)
 
 		if (track.is_clip_valid(msg.cur_clip_idx)) {
 			AudioClip &cur_clip = track.clips[msg.cur_clip_idx];
-			playhead.set_cur_clip_idx(msg.track, msg.cur_clip_idx,
-				cur_clip);
+			playhead.set_cur_clip_idx(msg.track, msg.cur_clip_idx);
 			playhead.set_cur_song_id(msg.track, cur_clip.song_id);
 		}
 	}
@@ -487,8 +486,7 @@ void AudioEngine::_handle_jump_playhead(AudioMsgJumpPlayhead &msg)
 
 		if (track.is_clip_valid(msg.cur_clip_idx)) {
 			AudioClip &cur_clip = track.clips[msg.cur_clip_idx];
-			playhead.set_cur_clip_idx(msg.track, msg.cur_clip_idx,
-				cur_clip);
+			playhead.set_cur_clip_idx(msg.track, msg.cur_clip_idx);
 			playhead.set_cur_song_id(msg.track, cur_clip.song_id);
 		}
 
@@ -518,7 +516,7 @@ void AudioEngine::_update_cur_clip_idx(unsigned int playhead_idx,
 
 	if (track.is_clip_valid(cur_clip_idx)) {
 		AudioClip &cur_clip = track.clips[cur_clip_idx];
-		playhead.set_cur_clip_idx(track_idx, cur_clip_idx, cur_clip);
+		playhead.set_cur_clip_idx(track_idx, cur_clip_idx);
 		playhead.set_cur_song_id(track_idx, cur_clip.song_id);
 	}
 }

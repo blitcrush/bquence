@@ -26,7 +26,8 @@ public:
 
 	ma_uint64 pull_stretch(double master_bpm, unsigned int track_idx,
 		unsigned int clip_idx, AudioClip &clip, double song_bpm,
-		float *dest, ma_uint64 first_frame, ma_uint64 num_frames);
+		float *dest, ma_uint64 first_frame, ma_uint64 num_frames,
+		ma_uint64 next_expected_first_frame);
 
 	void receive_chunk(unsigned int track, PlayheadChunk *chunk);
 
@@ -36,20 +37,10 @@ public:
 	// Causes free; must only be called within the audio thread
 	void jump(double beat);
 
-	// This was an actual problem...
-	// A potential problem would be if this causes all chunks to be popped,
-	// and the IOEngine does not re-push the popped chunks, then an audio
-	// dropout will occur because necessary chunks will be missing...
-	//
-	// Causes free; must only be called within the audio thread
-	void invalidate_cur_clip_idx(unsigned int track_idx);
-
 	unsigned int get_cur_clip_idx(unsigned int track_idx);
 	unsigned int get_cur_song_id(unsigned int track_idx);
-	// Causes free; must only be called within the audio thread
 	void set_cur_clip_idx(unsigned int track_idx,
-		unsigned int cur_clip_idx, AudioClip &cur_clip);
-	// Causes free; must only be called within the audio thread
+		unsigned int cur_clip_idx);
 	void set_cur_song_id(unsigned int track_idx, unsigned int cur_song_id);
 
 private:
@@ -68,11 +59,6 @@ private:
 		PlayheadChunk *head = nullptr, *tail = nullptr;
 		std::atomic<ma_uint64> cur_want_frame = 0;
 	};
-	struct _LastClipInfo {
-		double start = -1.0;
-		ma_uint64 first_frame = 0;
-		unsigned int song_id = 0;
-	};
 
 	void _copy_frames(float *dest, float *src, ma_uint64 dest_first_frame,
 		ma_uint64 src_first_frame, ma_uint64 num_frames,
@@ -83,8 +69,6 @@ private:
 	void _delete_chunk(PlayheadChunk *chunk);
 	void _pop_chunk(_ChunksList &chunks);
 	void _pop_all_chunks(unsigned int track_idx);
-
-	bool _needs_pop_and_seek(unsigned int track_idx, AudioClip &cur_clip);
 
 	bool _is_approx_equal(double a, double b);
 
@@ -108,13 +92,11 @@ private:
 
 	_TrackStInfo _st_info[_NUM_TRACKS];
 	_ChunksList _cache[_NUM_TRACKS];
-	_LastClipInfo _last_clips[_NUM_TRACKS];
-	std::atomic<unsigned int> _cur_clip_idxs[_NUM_TRACKS] = { 0 };
-	std::atomic<unsigned int> _cur_song_ids[_NUM_TRACKS] = { 0 };
-	std::atomic<bool> _last_clips_valid[_NUM_TRACKS] = { false };
-	std::atomic<bool> _cur_clip_idxs_valid[_NUM_TRACKS] = { false };
-	std::atomic<bool> _cur_song_ids_valid[_NUM_TRACKS] = { false };
-	std::atomic<bool> _needs_seek[_NUM_TRACKS] = { false };
+	std::atomic<unsigned int> _cur_clip_idx[_NUM_TRACKS] = { 0 };
+	std::atomic<unsigned int> _cur_song_id[_NUM_TRACKS] = { 0 };
+	std::atomic<ma_uint64> _expect_first_frame[_NUM_TRACKS] = { 0 };
+	std::atomic<unsigned int> _last_song_id[_NUM_TRACKS] = { 0 };
+	std::atomic<bool> _last_song_id_valid[_NUM_TRACKS] = { false };
 
 	ma_uint32 _num_channels = 0;
 	ma_uint32 _sample_rate = 0;

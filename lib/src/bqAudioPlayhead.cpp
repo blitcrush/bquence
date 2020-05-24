@@ -44,21 +44,20 @@ void AudioPlayhead::bind_library(Library *library)
 
 ma_uint64 AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
 	unsigned int clip_idx, AudioClip &clip, double song_bpm, float *dest,
-	ma_uint64 first_frame, ma_uint64 num_frames)
+	ma_uint64 first_frame, ma_uint64 num_frames,
+	ma_uint64 next_expected_first_frame)
 {
 	if (!_is_track_valid(track_idx)) {
 		return 0;
 	}
 
-	set_cur_clip_idx(track_idx, clip_idx, clip);
-	set_cur_song_id(track_idx, clip.song_id);
-
 	HANDLE st = _st[track_idx];
 
-	if (_needs_seek[track_idx]) {
+	if (first_frame != _expect_first_frame[track_idx] ||
+		clip.song_id != _last_song_id[track_idx] ||
+		!_last_song_id_valid[track_idx]) {
 		soundtouch_clear(st);
 		_cache[track_idx].cur_want_frame = first_frame;
-		_needs_seek[track_idx] = false;
 	}
 
 	_TrackStInfo &st_info = _st_info[track_idx];
@@ -117,6 +116,10 @@ ma_uint64 AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
 		}
 	}
 
+	_expect_first_frame[track_idx] = next_expected_first_frame;
+	_last_song_id[track_idx] = clip.song_id;
+	_last_song_id_valid[track_idx] = true;
+
 	return total_num_received;
 }
 
@@ -155,16 +158,8 @@ void AudioPlayhead::jump(double beat)
 	if (beat != _beat) {
 		for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
 			_pop_all_chunks(i);
-			_needs_seek[i] = true;
 		}
 		_beat = beat;
-	}
-}
-
-void AudioPlayhead::invalidate_cur_clip_idx(unsigned int track_idx)
-{
-	if (_is_track_valid(track_idx)) {
-		_cur_clip_idxs_valid[track_idx] = false;
 	}
 }
 
@@ -178,7 +173,7 @@ unsigned int AudioPlayhead::get_cur_clip_idx(unsigned int track_idx)
 	unsigned int cur_clip_idx = 0;
 
 	if (_is_track_valid(track_idx)) {
-		cur_clip_idx = _cur_clip_idxs[track_idx];
+		cur_clip_idx = _cur_clip_idx[track_idx];
 	}
 
 	return cur_clip_idx;
@@ -189,26 +184,17 @@ unsigned int AudioPlayhead::get_cur_song_id(unsigned int track_idx)
 	unsigned int cur_song_id = 0;
 
 	if (_is_track_valid(track_idx)) {
-		cur_song_id = _cur_song_ids[track_idx];
+		cur_song_id = _cur_song_id[track_idx];
 	}
 
 	return cur_song_id;
 }
 
 void AudioPlayhead::set_cur_clip_idx(unsigned int track_idx,
-	unsigned int cur_clip_idx, AudioClip &cur_clip)
+	unsigned int cur_clip_idx)
 {
 	if (_is_track_valid(track_idx)) {
-		if (cur_clip_idx != _cur_clip_idxs[track_idx] ||
-			!_cur_clip_idxs_valid[track_idx]) {
-			if (_needs_pop_and_seek(track_idx, cur_clip)) {
-				_pop_all_chunks(track_idx);
-				_needs_seek[track_idx] = true;
-			}
-
-			_cur_clip_idxs[track_idx] = cur_clip_idx;
-			_cur_clip_idxs_valid[track_idx] = true;
-		}
+		_cur_clip_idx[track_idx] = cur_clip_idx;
 	}
 }
 
@@ -216,13 +202,7 @@ void AudioPlayhead::set_cur_song_id(unsigned int track_idx,
 	unsigned int cur_song_id)
 {
 	if (_is_track_valid(track_idx)) {
-		if (cur_song_id != _cur_song_ids[track_idx] ||
-			!_cur_song_ids_valid[track_idx]) {
-			_pop_all_chunks(track_idx);
-			_needs_seek[track_idx] = true;
-			_cur_song_ids[track_idx] = cur_song_id;
-			_cur_song_ids_valid[track_idx] = true;
-		}
+		_cur_song_id[track_idx] = cur_song_id;
 	}
 }
 
@@ -270,7 +250,7 @@ void AudioPlayhead::_pull(unsigned int track_idx, AudioClip &clip, float *dest,
 		ma_uint64 chunk_last_frame = chunk->first_frame +
 			chunk->num_frames;
 
-		if (chunk->song_id == _cur_song_ids[track_idx] &&
+		if (chunk->song_id == clip.song_id &&
 			cur_first_frame >= chunk->first_frame &&
 			cur_first_frame < chunk_last_frame) {
 			ma_uint64 need_frames = num_frames - num_pulled;
@@ -384,52 +364,6 @@ void AudioPlayhead::_pop_all_chunks(unsigned int track_idx)
 	}
 	chunks.head = nullptr;
 	chunks.tail = nullptr;
-}
-
-bool AudioPlayhead::_needs_pop_and_seek(unsigned int track_idx,
-	AudioClip &cur_clip)
-{
-	bool needs_pop_seek = true;
-
-	if (_library && _is_track_valid(track_idx) &&
-		_last_clips_valid[track_idx]) {
-		_LastClipInfo &last_clip = _last_clips[track_idx];
-
-		if (cur_clip.song_id == last_clip.song_id) {
-			ma_uint64 frames_delta = llabs(static_cast<ma_int64>(
-				cur_clip.first_frame) - static_cast<ma_int64>(
-					last_clip.first_frame));
-
-			double beats_delta = fabs(cur_clip.start -
-				last_clip.start);
-
-			ma_uint64 beats_delta_to_frames =
-				_library->beats_to_out_samples(cur_clip.song_id,
-					beats_delta);
-
-			ma_uint64 beats_frames_delta = llabs(
-				static_cast<ma_int64>(beats_delta_to_frames) -
-				static_cast<ma_int64>(frames_delta));
-
-			// Accounts for floating-point (double) precision errors
-			// An error of only two frames with the benefit of no
-			// audio dropout is completely tolerable in most
-			// situations.
-			constexpr ma_uint64 BEATS_FRAMES_DELTA_TOLERANCE = 2;
-
-			if (beats_frames_delta <=
-				BEATS_FRAMES_DELTA_TOLERANCE) {
-				needs_pop_seek = false;
-			}
-		}
-	}
-
-	_last_clips[track_idx].start = cur_clip.start;
-	_last_clips[track_idx].first_frame = cur_clip.first_frame;
-	_last_clips[track_idx].song_id = cur_clip.song_id;
-	_last_clips_valid[track_idx] = true;
-
-	return needs_pop_seek;
 }
 
 bool AudioPlayhead::_is_approx_equal(double a, double b)

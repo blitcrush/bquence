@@ -23,6 +23,7 @@ void IOAudioFileDecoder::set_clip_idx(unsigned int clip_idx,
 {
 	if (!_last_clip_idx_valid || clip_idx != _last_clip_idx) {
 		_reset_next_send_frame();
+
 		_last_clip_idx = clip_idx;
 		_last_clip_idx_valid = true;
 	}

@@ -23,18 +23,52 @@ IOEngine::~IOEngine()
 	delete _msg_pool;
 }
 
-void IOEngine::decode_next_cache_chunks()
+void IOEngine::decode_next_cache_chunks(unsigned int playhead_idx,
+	unsigned int track_idx)
 {
-	if (!_library || !_audio) {
+	if (!_library || !_audio || !_is_playhead_valid(playhead_idx) ||
+		!_is_track_valid(track_idx) ||
+		_tracks[track_idx].num_clips() <= 0 ||
+		_playheads[playhead_idx].block_decode) {
 		return;
 	}
 
-	for (unsigned int i = 0; i < _NUM_PLAYHEADS; ++i) {
-		for (unsigned int j = 0; j < _NUM_TRACKS; ++j) {
-			if (_tracks[j].num_clips() > 0) {
-				_decode_next_cache_chunks(i, j);
-			}
-		}
+	unsigned int clip_idx = _audio->get_playhead_cur_clip_idx(playhead_idx,
+		track_idx);
+	unsigned int song_id = _audio->get_playhead_cur_song_id(playhead_idx,
+		track_idx);
+
+	IOTrack &track = _tracks[track_idx];
+	if (!track.is_clip_valid(clip_idx) ||
+		!_library->is_song_id_valid(song_id)) {
+		return;
+	}
+
+	const AudioClip &clip = track.clip_at(clip_idx);
+
+	// If the clip is less than one beat long, don't cache anything (the
+	// content should have already been preloaded). We want to avoid the
+	// decoder opening and closing lots of files, which would thrash the
+	// filesystem.
+	// Also, if the playhead is not actually inside the clip, don't cache
+	// anything (because it's not actually playing - it's just cued or
+	// something). This would need to be fixed later when implementing clip
+	// looping.
+	double playhead_beat = _audio->get_playhead_beat(playhead_idx);
+	if (clip.end - clip.start < 1.0 ||
+		playhead_beat < clip.start || playhead_beat >= clip.end) {
+		return;
+	}
+
+	IOAudioFileDecoder &decoder = _decoders[playhead_idx][track_idx];
+	decoder.set_clip_idx(clip_idx, clip);
+	decoder.set_song_id(song_id);
+
+	ma_uint64 cur_want_frame = _audio->get_cur_want_frame(playhead_idx,
+		track_idx);
+	PlayheadChunk *chunk = nullptr;
+	while (chunk = decoder.decode(cur_want_frame)) {
+		_audio->receive_playhead_chunk(playhead_idx, track_idx, chunk);
 	}
 }
 
@@ -212,52 +246,6 @@ void IOEngine::notify_audio_playhead_jumped(unsigned int playhead)
 	msg->type = IOMsgType::AUDIO_PLAYHEAD_JUMPED;
 	msg->contents.audio_playhead_jumped.playhead = playhead;
 	_msg_queue.push(msg);
-}
-
-void IOEngine::_decode_next_cache_chunks(unsigned int playhead_idx,
-	unsigned int track_idx)
-{
-	if (_playheads[playhead_idx].block_decode) {
-		return;
-	}
-
-	unsigned int clip_idx = _audio->get_playhead_cur_clip_idx(playhead_idx,
-		track_idx);
-	unsigned int song_id = _audio->get_playhead_cur_song_id(playhead_idx,
-		track_idx);
-
-	IOTrack &track = _tracks[track_idx];
-	if (!track.is_clip_valid(clip_idx) ||
-		!_library->is_song_id_valid(song_id)) {
-		return;
-	}
-
-	const AudioClip &clip = track.clip_at(clip_idx);
-
-	// If the clip is less than one beat long, don't cache anything (the
-	// content should have already been preloaded). We want to avoid the
-	// decoder opening and closing lots of files, which would thrash the
-	// filesystem.
-	// Also, if the playhead is not actually inside the clip, don't cache
-	// anything (because it's not actually playing - it's just cued or
-	// something). This would need to be fixed later when implementing clip
-	// looping.
-	double playhead_beat = _audio->get_playhead_beat(playhead_idx);
-	if (clip.end - clip.start < 1.0 ||
-		playhead_beat < clip.start || playhead_beat >= clip.end) {
-		return;
-	}
-
-	IOAudioFileDecoder &decoder = _decoders[playhead_idx][track_idx];
-	decoder.set_clip_idx(clip_idx, clip);
-	decoder.set_song_id(song_id);
-
-	ma_uint64 cur_want_frame = _audio->get_cur_want_frame(playhead_idx,
-		track_idx);
-	PlayheadChunk *chunk = nullptr;
-	while (chunk = decoder.decode(cur_want_frame)) {
-		_audio->receive_playhead_chunk(playhead_idx, track_idx, chunk);
-	}
 }
 
 bool IOEngine::_is_track_valid(unsigned int track_idx)

@@ -16,6 +16,8 @@ struct AudioThreadUserData {
 
 struct IOThreadUserData {
 	bq::World *world = nullptr;
+	bool track_enabled[4] = { false };
+	bool playhead_playing[2] = { false };
 	bool running = false;
 };
 
@@ -81,7 +83,22 @@ void audio_callback(ma_device *device, void *out_frames, const void *in_frames,
 void io_thread_callback(IOThreadUserData *user_data)
 {
 	while (user_data->running) {
-		user_data->world->pump_io_thread(true);
+		user_data->world->pump_io_thread();
+
+		for (unsigned int i = 0; i < bq::WORLD_NUM_PLAYHEADS; ++i) {
+			if (user_data->playhead_playing[i]) {
+				for (unsigned int j = 0;
+					j < bq::WORLD_NUM_TRACKS;
+					++j) {
+					if (user_data->track_enabled[j]) {
+						user_data->world->decode_chunks(
+							i, j);
+					}
+				}
+			}
+		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
 }
 
@@ -134,7 +151,7 @@ void handle_load_song(bq::World *world, std::string cmd_line)
 }
 
 void handle_toggle_playhead(AudioThreadUserData &audio_user_data,
-	std::string cmd_line)
+	IOThreadUserData &io_user_data, std::string cmd_line)
 {
 	std::istringstream stream(cmd_line);
 
@@ -146,11 +163,12 @@ void handle_toggle_playhead(AudioThreadUserData &audio_user_data,
 	if (playhead < bq::WORLD_NUM_PLAYHEADS) {
 		bool &playing = audio_user_data.playhead_playing[playhead];
 		playing = !playing;
+		io_user_data.playhead_playing[playhead] = playing;
 	}
 }
 
 void handle_toggle_track(AudioThreadUserData &audio_user_data,
-	std::string cmd_line)
+	IOThreadUserData &io_user_data, std::string cmd_line)
 {
 	std::istringstream stream(cmd_line);
 
@@ -162,6 +180,7 @@ void handle_toggle_track(AudioThreadUserData &audio_user_data,
 	if (track < bq::WORLD_NUM_TRACKS) {
 		bool &enabled = audio_user_data.track_enabled[track];
 		enabled = !enabled;
+		io_user_data.track_enabled[track] = enabled;
 	}
 }
 
@@ -247,7 +266,7 @@ channel, and the output of the second playhead is routed to the right channel)."
 	std::cout << "Load song: l <filename> <sample rate> <BPM>" << std::endl;
 	std::cout << "Insert clip: i <track index> <start beat> <end beat> \
 <fade in length> <fade out length> <pitch shift> <first frame> <song ID>" <<
-	std::endl;
+std::endl;
 	std::cout << "Erase range: e <track index> <from beat> <to beat>" <<
 		std::endl;
 	std::cout << "Toggle playhead: p <playhead index>" << std::endl;
@@ -282,11 +301,13 @@ channel, and the output of the second playhead is routed to the right channel)."
 
 			case 'p':
 				handle_toggle_playhead(audio_user_data,
+					io_user_data,
 					cmd_line);
 				break;
 
 			case 't':
-				handle_toggle_track(audio_user_data, cmd_line);
+				handle_toggle_track(audio_user_data,
+					io_user_data, cmd_line);
 				break;
 
 			case 'j':

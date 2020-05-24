@@ -105,16 +105,17 @@ void World::pump_audio_thread()
 	}
 }
 
-void World::pump_io_thread(bool should_sleep)
+void World::pump_io_thread()
 {
 	if (_io) {
 		_io->handle_all_msgs();
-		_io->decode_next_cache_chunks();
 	}
+}
 
-	if (should_sleep) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(
-			IO_THREAD_SLEEP_INTERVAL_MILLIS));
+void World::decode_chunks(unsigned int playhead_idx, unsigned int track_idx)
+{
+	if (_io) {
+		_io->decode_next_cache_chunks(playhead_idx, track_idx);
 	}
 }
 

@@ -20,7 +20,8 @@ public:
 	IOEngine();
 	~IOEngine();
 
-	void decode_next_cache_chunks();
+	void decode_next_cache_chunks(unsigned int playhead_idx,
+		unsigned int track_idx);
 
 	void set_decode_config(ma_uint32 num_channels, ma_uint32 sample_rate);
 	void bind_audio_engine(AudioEngine *audio);
@@ -41,9 +42,6 @@ public:
 	void notify_audio_playhead_jumped(unsigned int playhead);
 
 private:
-	void _decode_next_cache_chunks(unsigned int playhead_idx,
-		unsigned int track_idx);
-
 	bool _is_track_valid(unsigned int track_idx);
 	bool _is_playhead_valid(unsigned int playhead_idx);
 
