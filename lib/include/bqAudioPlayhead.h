@@ -10,7 +10,6 @@
 #include <SoundTouchDLL.h>
 
 #include <atomic>
-#include <cmath>
 
 namespace bq {
 class IOEngine;
@@ -69,8 +68,6 @@ private:
 	void _delete_chunk(PlayheadChunk *chunk);
 	void _pop_chunk(_ChunksList &chunks);
 	void _pop_all_chunks(unsigned int track_idx);
-
-	bool _is_approx_equal(double a, double b);
 
 	bool _is_track_valid(unsigned int track_idx);
 
