@@ -61,7 +61,7 @@ void IOEngine::decode_next_cache_chunks(unsigned int playhead_idx,
 	}
 
 	IOAudioFileDecoder &decoder = _decoders[playhead_idx][track_idx];
-	decoder.set_clip_idx(clip_idx, clip);
+	decoder.set_clip_idx(clip_idx);
 	decoder.set_song_id(song_id);
 
 	ma_uint64 cur_want_frame = _audio->get_cur_want_frame(playhead_idx,

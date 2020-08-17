@@ -43,9 +43,8 @@ void AudioPlayhead::bind_library(Library *library)
 }
 
 ma_uint64 AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
-	unsigned int clip_idx, AudioClip &clip, double song_bpm, float *dest,
-	ma_uint64 first_frame, ma_uint64 num_frames,
-	ma_uint64 next_expected_first_frame)
+	AudioClip &clip, double song_bpm, float *dest, ma_uint64 first_frame,
+	ma_uint64 num_frames, ma_uint64 next_expected_first_frame)
 {
 	if (!_is_track_valid(track_idx)) {
 		return 0;

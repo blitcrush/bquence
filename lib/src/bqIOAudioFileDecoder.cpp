@@ -18,8 +18,7 @@ void IOAudioFileDecoder::bind_library(Library *library)
 	_library = library;
 }
 
-void IOAudioFileDecoder::set_clip_idx(unsigned int clip_idx,
-	const AudioClip &cur_clip)
+void IOAudioFileDecoder::set_clip_idx(unsigned int clip_idx)
 {
 	if (!_last_clip_idx_valid || clip_idx != _last_clip_idx) {
 		_reset_next_send_frame();
@@ -75,10 +74,8 @@ PlayheadChunk *IOAudioFileDecoder::decode(ma_uint64 from_frame)
 	}
 
 	if (_decoder_cur_frame != actual_from_frame) {
-		ma_uint64 song_actual_from_frame = _library->samples_out2self(
-			_last_song_id, actual_from_frame);
-		if (ma_decoder_seek_to_pcm_frame(&_decoder,
-			song_actual_from_frame) != MA_SUCCESS) {
+		if (ma_decoder_seek_to_pcm_frame(&_decoder, actual_from_frame)
+			!= MA_SUCCESS) {
 			_end_of_song = true;
 			return nullptr;
 		}

@@ -18,7 +18,7 @@ public:
 
 	void bind_library(Library *library);
 
-	void set_clip_idx(unsigned int clip_idx, const AudioClip &cur_clip);
+	void set_clip_idx(unsigned int clip_idx);
 	void set_song_id(unsigned int song_id);
 	PlayheadChunk *decode(ma_uint64 from_frame);
 
@@ -27,8 +27,6 @@ public:
 
 private:
 	void _reset_next_send_frame();
-
-	bool _needs_reset_next_frame(const AudioClip &cur_clip);
 
 	void _open_file(unsigned int song_id);
 	void _close_file();

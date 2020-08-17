@@ -24,8 +24,8 @@ public:
 	void bind_library(Library *library);
 
 	ma_uint64 pull_stretch(double master_bpm, unsigned int track_idx,
-		unsigned int clip_idx, AudioClip &clip, double song_bpm,
-		float *dest, ma_uint64 first_frame, ma_uint64 num_frames,
+		AudioClip &clip, double song_bpm, float *dest,
+		ma_uint64 first_frame, ma_uint64 num_frames,
 		ma_uint64 next_expected_first_frame);
 
 	void receive_chunk(unsigned int track, PlayheadChunk *chunk);

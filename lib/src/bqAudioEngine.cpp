@@ -129,9 +129,9 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 
 		float *pull_dest = dest + (clip_first_frame_ofs *
 			_num_channels);
-		_playheads[playhead_idx].pull_stretch(_bpm, track_idx, i, clip,
-			song_bpm, pull_dest, song_first_frame,
-			clip_num_frames, song_next_first_frame);
+		_playheads[playhead_idx].pull_stretch(_bpm, track_idx, clip,
+			song_bpm, pull_dest, song_first_frame, clip_num_frames,
+			song_next_first_frame);
 
 		// Fade in
 		double fade_in_last_beat = clip.start + clip.fade_in;
