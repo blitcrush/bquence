@@ -176,8 +176,7 @@ AudioClipPreload IOTrack::_preload(unsigned int song_id, ma_uint64 first_frame)
 	ma_decoder decoder;
 	if (ma_decoder_init_file(_library->filename(song_id).c_str(),
 		&decoder_cfg, &decoder) == MA_SUCCESS) {
-		if (ma_decoder_seek_to_pcm_frame(&decoder,
-			_library->samples_out2self(song_id, first_frame)) ==
+		if (ma_decoder_seek_to_pcm_frame(&decoder, first_frame) ==
 			MA_SUCCESS) {
 			result.num_channels = _preload_num_channels;
 			result.sample_rate = _preload_sample_rate;
