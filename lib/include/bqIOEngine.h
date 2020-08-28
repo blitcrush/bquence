@@ -41,6 +41,10 @@ public:
 	void jump_playhead(unsigned int playhead, double beat);
 	void notify_audio_playhead_jumped(unsigned int playhead);
 
+	bool wait_cur_want_frame(unsigned int playhead, unsigned int track);
+	void set_wait_cur_want_frame(unsigned int playhead, unsigned int track,
+		bool value);
+
 private:
 	bool _is_track_valid(unsigned int track_idx);
 	bool _is_playhead_valid(unsigned int playhead_idx);
@@ -68,9 +72,11 @@ private:
 	struct DirtyPlayheadInfo {
 		double jump_beat = 0.0;
 		bool jumping = false;
-		bool block_decode = false;
+		bool wait_playhead_jump = false;
 		bool cur_clip_dirty[_NUM_TRACKS] = { false };
 	} _playheads[_NUM_PLAYHEADS];
+	std::atomic_bool _wait_cur_want_frame[_NUM_PLAYHEADS][_NUM_TRACKS] =
+	{ false };
 
 	IOAudioFileDecoder _decoders[_NUM_PLAYHEADS][_NUM_TRACKS];
 

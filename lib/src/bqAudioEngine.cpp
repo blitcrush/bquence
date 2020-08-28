@@ -174,6 +174,10 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 		_fill_silence(dest, prev_last_frame_ofs,
 			silence_num_frames, _num_channels);
 	}
+
+	if (_io->wait_cur_want_frame(playhead_idx, track_idx)) {
+		_io->set_wait_cur_want_frame(playhead_idx, track_idx, false);
+	}
 }
 
 void AudioEngine::pull_done_advance_playhead(unsigned int playhead_idx,

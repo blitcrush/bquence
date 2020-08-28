@@ -29,7 +29,8 @@ void IOEngine::decode_next_cache_chunks(unsigned int playhead_idx,
 	if (!_library || !_audio || !_is_playhead_valid(playhead_idx) ||
 		!_is_track_valid(track_idx) ||
 		_tracks[track_idx].num_clips() <= 0 ||
-		_playheads[playhead_idx].block_decode) {
+		_playheads[playhead_idx].wait_playhead_jump ||
+		_wait_cur_want_frame[playhead_idx][track_idx]) {
 		return;
 	}
 
@@ -160,6 +161,8 @@ void IOEngine::handle_all_msgs()
 			}
 
 			for (unsigned int j = 0; j < _NUM_PLAYHEADS; ++j) {
+				_wait_cur_want_frame[j][i] = true;
+
 				_playheads[j].cur_clip_dirty[i] = true;
 				_decoders[j][i].invalidate_last_clip_idx();
 			}
@@ -248,6 +251,23 @@ void IOEngine::notify_audio_playhead_jumped(unsigned int playhead)
 	_msg_queue.push(msg);
 }
 
+bool IOEngine::wait_cur_want_frame(unsigned int playhead, unsigned int track)
+{
+	if (_is_playhead_valid(playhead) && _is_track_valid(track)) {
+		return _wait_cur_want_frame[playhead][track];
+	} else {
+		return false;
+	}
+}
+
+void IOEngine::set_wait_cur_want_frame(unsigned int playhead,
+	unsigned int track, bool value)
+{
+	if (_is_playhead_valid(playhead) && _is_track_valid(track)) {
+		_wait_cur_want_frame[playhead][track] = value;
+	}
+}
+
 bool IOEngine::_is_track_valid(unsigned int track_idx)
 {
 	return track_idx < _NUM_TRACKS;
@@ -314,8 +334,9 @@ void IOEngine::_handle_jump_playhead(IOMsgJumpPlayhead &msg)
 		DirtyPlayheadInfo &playhead = _playheads[msg.playhead];
 		playhead.jump_beat = msg.beat;
 		playhead.jumping = true;
-		playhead.block_decode = true;
+		playhead.wait_playhead_jump = true;
 		for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
+			_wait_cur_want_frame[msg.playhead][i] = true;
 			playhead.cur_clip_dirty[i] = true;
 			_decoders[msg.playhead][i].playhead_jumped();
 		}
@@ -325,7 +346,7 @@ void IOEngine::_handle_jump_playhead(IOMsgJumpPlayhead &msg)
 void IOEngine::_handle_audio_playhead_jumped(IOMsgAudioPlayheadJumped &msg)
 {
 	if (_is_playhead_valid(msg.playhead)) {
-		_playheads[msg.playhead].block_decode = false;
+		_playheads[msg.playhead].wait_playhead_jump = false;
 	}
 }
 

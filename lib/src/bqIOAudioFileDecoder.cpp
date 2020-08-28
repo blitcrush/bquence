@@ -47,8 +47,8 @@ PlayheadChunk *IOAudioFileDecoder::decode(ma_uint64 from_frame)
 	}
 
 	// If we skipped chunks (e.g. clip's sample offset was adjusted), reset
-	// the next send frame rather to from_frame rather than decoding
-	// everything in between (because those chunks won't be used)...
+	// the next send frame to from_frame rather than decoding everything in
+	// between (because those chunks won't be used)...
 	if (from_frame > _next_send_frame + _CHUNK_NUM_FRAMES) {
 		_reset_next_send_frame();
 	}
