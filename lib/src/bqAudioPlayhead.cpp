@@ -52,7 +52,7 @@ ma_uint64 AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
 
 	HANDLE st = _st[track_idx];
 
-	if (first_frame != _expect_first_frame[track_idx] ||
+	if (_off_by_over_two(first_frame, _expect_first_frame[track_idx]) ||
 		clip.song_id != _last_song_id[track_idx] ||
 		!_last_song_id_valid[track_idx]) {
 		soundtouch_clear(st);
@@ -335,6 +335,11 @@ void AudioPlayhead::_pop_all_chunks(unsigned int track_idx)
 	}
 	chunks.head = nullptr;
 	chunks.tail = nullptr;
+}
+
+bool AudioPlayhead::_off_by_over_two(ma_uint64 a, ma_uint64 b)
+{
+	return std::llabs(a - b) > 2;
 }
 
 bool AudioPlayhead::_is_track_valid(unsigned int track_idx)
