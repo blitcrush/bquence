@@ -35,6 +35,7 @@ private:
 	ma_uint32 _sample_rate = 0;
 
 	ma_uint64 _decoder_cur_frame = 0;
+        ma_uint64 _last_from_frame = 0;
 	ma_uint64 _next_send_frame = 0;
 	bool _next_send_frame_valid = false;
 

@@ -68,7 +68,7 @@ void IOEngine::decode_next_cache_chunks(unsigned int playhead_idx,
 	ma_uint64 cur_want_frame = _audio->get_cur_want_frame(playhead_idx,
 		track_idx);
 	PlayheadChunk *chunk = nullptr;
-	while (chunk = decoder.decode(cur_want_frame)) {
+	while ((chunk = decoder.decode(cur_want_frame))) {
 		_audio->receive_playhead_chunk(playhead_idx, track_idx, chunk);
 	}
 }
@@ -110,7 +110,7 @@ void IOEngine::bind_library(Library *library)
 void IOEngine::handle_all_msgs()
 {
 	IOMsg *msg = nullptr;
-	while (msg = _msg_queue.pop()) {
+	while ((msg = _msg_queue.pop())) {
 		switch (msg->type) {
 		case IOMsgType::INSERT_CLIP:
 			_handle_insert_clip(msg->contents.insert_clip);

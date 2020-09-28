@@ -339,7 +339,7 @@ void AudioPlayhead::_pop_all_chunks(unsigned int track_idx)
 
 bool AudioPlayhead::_off_by_over_two(ma_uint64 a, ma_uint64 b)
 {
-	return std::llabs(a - b) > 2;
+	return std::llabs(static_cast<ma_int64>(a - b)) > 2;
 }
 
 bool AudioPlayhead::_is_track_valid(unsigned int track_idx)

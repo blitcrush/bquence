@@ -220,7 +220,7 @@ void AudioEngine::bind_library(Library *library)
 void AudioEngine::handle_all_msgs()
 {
 	AudioMsg *msg = nullptr;
-	while (msg = _msg_queue.pop()) {
+	while ((msg = _msg_queue.pop())) {
 		switch (msg->type) {
 		case AudioMsgType::RECEIVE_CLIPS:
 			_handle_receive_clips(msg->contents.receive_clips);
