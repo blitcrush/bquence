@@ -95,10 +95,10 @@ private:
 
 	_TrackStInfo _st_info[_NUM_TRACKS];
 	_ChunksList _cache[_NUM_TRACKS];
-	std::atomic<unsigned int> _cur_clip_idx[_NUM_TRACKS] = { 0 };
-	std::atomic<unsigned int> _cur_song_id[_NUM_TRACKS] = { 0 };
-	std::atomic<ma_uint64> _expect_first_frame[_NUM_TRACKS] = { 0 };
-	std::atomic<unsigned int> _last_song_id[_NUM_TRACKS] = { 0 };
+	std::atomic<unsigned int> _cur_clip_idx[_NUM_TRACKS] = { { 0 } };
+	std::atomic<unsigned int> _cur_song_id[_NUM_TRACKS] = { { 0 } };
+	std::atomic<ma_uint64> _expect_first_frame[_NUM_TRACKS] = { { 0 } };
+	std::atomic<unsigned int> _last_song_id[_NUM_TRACKS] = { { 0 } };
 	std::atomic<bool> _last_song_id_valid[_NUM_TRACKS] = { { false } };
 	std::atomic<bool> _can_request_emergency_chunk[_NUM_TRACKS] = { { false } };
 
