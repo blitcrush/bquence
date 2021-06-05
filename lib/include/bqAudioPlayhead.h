@@ -24,7 +24,7 @@ public:
 	void bind_io_engine(IOEngine *io);
 	void bind_library(Library *library);
 
-	ma_uint64 pull_stretch(double master_bpm, unsigned int track_idx,
+	bool pull_stretch(double master_bpm, unsigned int track_idx,
 		AudioClip &clip, double song_bpm, float *dest,
 		ma_uint64 first_frame, ma_uint64 num_frames,
 		ma_uint64 next_expected_first_frame);
@@ -43,10 +43,13 @@ public:
 		unsigned int cur_clip_idx);
 	void set_cur_song_id(unsigned int track_idx, unsigned int cur_song_id);
 
+	void set_cannot_request_emergency_chunk(unsigned int track_idx);
+	bool get_can_request_emergency_chunk(unsigned int track_idx);
+
 private:
 	void _setup_soundtouch(HANDLE &st);
 
-	void _pull(unsigned int track_idx, AudioClip &clip, float *dest,
+	bool _pull(unsigned int track_idx, AudioClip &clip, float *dest,
 		ma_uint64 num_frames);
 
 	static constexpr unsigned int _NUM_TRACKS = WORLD_NUM_TRACKS;
@@ -57,7 +60,7 @@ private:
 	};
 	struct _ChunksList {
 		PlayheadChunk *head = nullptr, *tail = nullptr;
-		std::atomic<ma_uint64> cur_want_frame = 0;
+		std::atomic<ma_uint64> cur_want_frame = { 0 };
 	};
 
 	void _copy_frames(float *dest, float *src, ma_uint64 dest_first_frame,
@@ -74,7 +77,7 @@ private:
 
 	bool _is_track_valid(unsigned int track_idx);
 
-	std::atomic<double> _beat = 0.0;
+	std::atomic<double> _beat = { 0.0 };
 
 	// Thank you Mixxx developers for figuring this number out!
 	// https://github.com/mixxxdj/mixxx/blob/master/src/engine/bufferscalers/enginebufferscalest.cpp#L25
@@ -96,7 +99,8 @@ private:
 	std::atomic<unsigned int> _cur_song_id[_NUM_TRACKS] = { 0 };
 	std::atomic<ma_uint64> _expect_first_frame[_NUM_TRACKS] = { 0 };
 	std::atomic<unsigned int> _last_song_id[_NUM_TRACKS] = { 0 };
-	std::atomic<bool> _last_song_id_valid[_NUM_TRACKS] = { false };
+	std::atomic<bool> _last_song_id_valid[_NUM_TRACKS] = { { false } };
+	std::atomic<bool> _can_request_emergency_chunk[_NUM_TRACKS] = { { false } };
 
 	ma_uint32 _num_channels = 0;
 	ma_uint32 _sample_rate = 0;

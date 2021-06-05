@@ -21,7 +21,7 @@ void IOAudioFileDecoder::bind_library(Library *library)
 void IOAudioFileDecoder::set_clip_idx(unsigned int clip_idx)
 {
 	if (!_last_clip_idx_valid || clip_idx != _last_clip_idx) {
-		_reset_next_send_frame();
+		reset_next_send_frame();
 
 		_last_clip_idx = clip_idx;
 		_last_clip_idx_valid = true;
@@ -33,7 +33,7 @@ void IOAudioFileDecoder::set_song_id(unsigned int song_id)
 	if (!_last_song_id_valid || song_id != _last_song_id) {
 		_open_file(song_id);
 
-		_reset_next_send_frame();
+		reset_next_send_frame();
 
 		_last_song_id = song_id;
 		_last_song_id_valid = true;
@@ -47,14 +47,14 @@ PlayheadChunk *IOAudioFileDecoder::decode(ma_uint64 from_frame)
 	}
 
 	if (from_frame < _last_from_frame) {
-		_reset_next_send_frame();
+		reset_next_send_frame();
 	}
 
 	// If we skipped chunks (e.g. clip's sample offset was adjusted), reset
 	// the next send frame to from_frame rather than decoding everything in
 	// between (because those chunks won't be used)...
 	if (from_frame > _next_send_frame + _CHUNK_NUM_FRAMES) {
-		_reset_next_send_frame();
+		reset_next_send_frame();
 	}
 
 	ma_uint64 needs_chunk_threshold = _next_send_frame;
@@ -120,12 +120,7 @@ void IOAudioFileDecoder::invalidate_last_clip_idx()
 	_last_clip_idx_valid = false;
 }
 
-void IOAudioFileDecoder::playhead_jumped()
-{
-	_reset_next_send_frame();
-}
-
-void IOAudioFileDecoder::_reset_next_send_frame()
+void IOAudioFileDecoder::reset_next_send_frame()
 {
 	_next_send_frame = 0;
 	_next_send_frame_valid = false;

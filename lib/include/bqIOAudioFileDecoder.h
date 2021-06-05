@@ -23,11 +23,9 @@ public:
 	PlayheadChunk *decode(ma_uint64 from_frame);
 
 	void invalidate_last_clip_idx();
-	void playhead_jumped();
+	void reset_next_send_frame();
 
 private:
-	void _reset_next_send_frame();
-
 	void _open_file(unsigned int song_id);
 	void _close_file();
 

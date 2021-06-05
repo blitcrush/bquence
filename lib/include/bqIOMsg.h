@@ -19,7 +19,8 @@ enum class IOMsgType {
 	DELETE_OLD_PRELOADS,
 	DELETE_PLAYHEAD_CHUNK,
 	JUMP_PLAYHEAD,
-	AUDIO_PLAYHEAD_JUMPED
+	AUDIO_PLAYHEAD_JUMPED,
+	REQUEST_EMERGENCY_CHUNK
 };
 
 struct IOMsgInsertClip {
@@ -57,6 +58,11 @@ struct IOMsgAudioPlayheadJumped {
 	unsigned int playhead;
 };
 
+struct IOMsgRequestEmergencyChunk {
+	unsigned int playhead;
+	unsigned int track;
+};
+
 union IOMsgContents {
 	IOMsgInsertClip insert_clip;
 	IOMsgEraseClipsRange erase_clips_range;
@@ -65,6 +71,7 @@ union IOMsgContents {
 	IOMsgDeletePlayheadChunk delete_playhead_chunk;
 	IOMsgJumpPlayhead jump_playhead;
 	IOMsgAudioPlayheadJumped audio_playhead_jumped;
+	IOMsgRequestEmergencyChunk request_emergency_chunk;
 };
 
 struct IOMsg {

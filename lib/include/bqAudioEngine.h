@@ -95,11 +95,11 @@ private:
 		return (x < a) ? a : (x > b) ? b : x;
 	}
 
-	std::atomic<unsigned int> _num_channels = 0;
-	std::atomic<unsigned int> _sample_rate = 0;
-	std::atomic<double> _bpm = 0.0;
-	std::atomic<double> _beats_to_samples = 0.0;
-	std::atomic<double> _samples_to_beats = 0.0;
+	std::atomic<unsigned int> _num_channels = { 0 };
+	std::atomic<unsigned int> _sample_rate = { 0 };
+	std::atomic<double> _bpm = { 0.0 };
+	std::atomic<double> _beats_to_samples = { 0.0 };
+	std::atomic<double> _samples_to_beats = { 0.0 };
 
 	static constexpr unsigned int _NUM_TRACKS = WORLD_NUM_TRACKS;
 	AudioClipsArray _tracks[_NUM_TRACKS];

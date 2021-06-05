@@ -129,9 +129,15 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 
 		float *pull_dest = dest + (clip_first_frame_ofs *
 			_num_channels);
-		_playheads[playhead_idx].pull_stretch(_bpm, track_idx, clip,
-			song_bpm, pull_dest, song_first_frame, clip_num_frames,
-			song_next_first_frame);
+		AudioPlayhead &playhead = _playheads[playhead_idx];
+		bool playhead_pull_successful = playhead.pull_stretch(_bpm,
+			track_idx, clip, song_bpm, pull_dest, song_first_frame,
+			clip_num_frames, song_next_first_frame);
+		if (!playhead_pull_successful &&
+			playhead.get_can_request_emergency_chunk(track_idx)) {
+			playhead.set_cannot_request_emergency_chunk(track_idx);
+			_io->request_emergency_chunk(playhead_idx, track_idx);
+		}
 
 		// Fade in
 		double fade_in_last_beat = clip.start + clip.fade_in;

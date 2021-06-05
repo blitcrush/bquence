@@ -41,6 +41,8 @@ public:
 	void jump_playhead(unsigned int playhead, double beat);
 	void notify_audio_playhead_jumped(unsigned int playhead);
 
+	void request_emergency_chunk(unsigned int playhead, unsigned int track);
+
 	bool wait_cur_want_frame(unsigned int playhead, unsigned int track);
 	void set_wait_cur_want_frame(unsigned int playhead, unsigned int track,
 		bool value);
@@ -59,6 +61,8 @@ private:
 	void _handle_jump_playhead(IOMsgJumpPlayhead &msg);
 	void _handle_audio_playhead_jumped(IOMsgAudioPlayheadJumped &msg);
 
+	void _handle_request_emergency_chunk(IOMsgRequestEmergencyChunk &msg);
+
 	void _update_audio_cur_clip_idx(unsigned int playhead_idx,
 		unsigned int track_idx);
 
@@ -76,7 +80,7 @@ private:
 		bool cur_clip_dirty[_NUM_TRACKS] = { false };
 	} _playheads[_NUM_PLAYHEADS];
 	std::atomic_bool _wait_cur_want_frame[_NUM_PLAYHEADS][_NUM_TRACKS] =
-	{ false };
+	{ { { false } } };
 
 	IOAudioFileDecoder _decoders[_NUM_PLAYHEADS][_NUM_TRACKS];
 

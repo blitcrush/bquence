@@ -144,6 +144,10 @@ void IOEngine::handle_all_msgs()
 				msg->contents.audio_playhead_jumped);
 			break;
 
+		case IOMsgType::REQUEST_EMERGENCY_CHUNK:
+			_handle_request_emergency_chunk(
+				msg->contents.request_emergency_chunk);
+
 		default:
 			break;
 		}
@@ -251,6 +255,15 @@ void IOEngine::notify_audio_playhead_jumped(unsigned int playhead)
 	_msg_queue.push(msg);
 }
 
+void IOEngine::request_emergency_chunk(unsigned int playhead, unsigned int track)
+{
+	IOMsg *msg = _msg_pool->allocate();
+	msg->type = IOMsgType::REQUEST_EMERGENCY_CHUNK;
+	msg->contents.request_emergency_chunk.playhead = playhead;
+	msg->contents.request_emergency_chunk.track = track;
+	_msg_queue.push(msg);
+}
+
 bool IOEngine::wait_cur_want_frame(unsigned int playhead, unsigned int track)
 {
 	if (_is_playhead_valid(playhead) && _is_track_valid(track)) {
@@ -338,7 +351,7 @@ void IOEngine::_handle_jump_playhead(IOMsgJumpPlayhead &msg)
 		for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
 			_wait_cur_want_frame[msg.playhead][i] = true;
 			playhead.cur_clip_dirty[i] = true;
-			_decoders[msg.playhead][i].playhead_jumped();
+			_decoders[msg.playhead][i].reset_next_send_frame();
 		}
 	}
 }
@@ -347,6 +360,13 @@ void IOEngine::_handle_audio_playhead_jumped(IOMsgAudioPlayheadJumped &msg)
 {
 	if (_is_playhead_valid(msg.playhead)) {
 		_playheads[msg.playhead].wait_playhead_jump = false;
+	}
+}
+
+void IOEngine::_handle_request_emergency_chunk(IOMsgRequestEmergencyChunk &msg)
+{
+	if (_is_playhead_valid(msg.playhead) && _is_track_valid(msg.track)) {
+		_decoders[msg.playhead][msg.track].reset_next_send_frame();
 	}
 }
 

@@ -42,7 +42,7 @@ void AudioPlayhead::bind_library(Library *library)
 	_library = library;
 }
 
-ma_uint64 AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
+bool AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
 	AudioClip &clip, double song_bpm, float *dest, ma_uint64 first_frame,
 	ma_uint64 num_frames, ma_uint64 next_expected_first_frame)
 {
@@ -72,10 +72,13 @@ ma_uint64 AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
 	}
 	st_info.valid = true;
 
+	bool all_pulls_successful = true;
+
 	ma_uint64 total_num_received = 0;
 	while (total_num_received < num_frames) {
 		if (soundtouch_numSamples(st) == 0) {
-			_pull(track_idx, clip, _st_src, _NUM_ST_SRC_FRAMES);
+			all_pulls_successful = all_pulls_successful && _pull(
+				track_idx, clip, _st_src, _NUM_ST_SRC_FRAMES);
 			soundtouch_putSamples(st, _st_src, _NUM_ST_SRC_FRAMES);
 		}
 
@@ -91,7 +94,7 @@ ma_uint64 AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
 	_last_song_id[track_idx] = clip.song_id;
 	_last_song_id_valid[track_idx] = true;
 
-	return total_num_received;
+	return all_pulls_successful;
 }
 
 void AudioPlayhead::receive_chunk(unsigned int track_idx, PlayheadChunk *chunk)
@@ -105,6 +108,7 @@ void AudioPlayhead::receive_chunk(unsigned int track_idx, PlayheadChunk *chunk)
 			chunks.head = chunk;
 			chunks.tail = chunk;
 		}
+		_can_request_emergency_chunk[track_idx] = true;
 	} else {
 		_delete_chunk(chunk);
 	}
@@ -128,6 +132,7 @@ void AudioPlayhead::jump(double beat)
 {
 	if (beat != _beat) {
 		for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
+			set_cannot_request_emergency_chunk(i);
 			_pop_all_chunks(i);
 		}
 		_beat = beat;
@@ -177,6 +182,22 @@ void AudioPlayhead::set_cur_song_id(unsigned int track_idx,
 	}
 }
 
+void AudioPlayhead::set_cannot_request_emergency_chunk(unsigned int track_idx)
+{
+	if (_is_track_valid(track_idx)) {
+		_can_request_emergency_chunk[track_idx] = false;
+	}
+}
+
+bool AudioPlayhead::get_can_request_emergency_chunk(unsigned int track_idx)
+{
+	if (_is_track_valid(track_idx)) {
+		return _can_request_emergency_chunk[track_idx];
+	} else {
+		return false;
+	}
+}
+
 void AudioPlayhead::_setup_soundtouch(HANDLE &st)
 {
 	if (st) {
@@ -206,7 +227,7 @@ void AudioPlayhead::_setup_soundtouch(HANDLE &st)
 	_st_info->valid = false;
 }
 
-void AudioPlayhead::_pull(unsigned int track_idx, AudioClip &clip, float *dest,
+bool AudioPlayhead::_pull(unsigned int track_idx, AudioClip &clip, float *dest,
 	ma_uint64 num_frames)
 {
 	ma_uint64 initial_want_frame = _cache[track_idx].cur_want_frame;
@@ -263,13 +284,10 @@ void AudioPlayhead::_pull(unsigned int track_idx, AudioClip &clip, float *dest,
 		_fill_silence(dest, num_pulled, num_frames - num_pulled,
 			_num_channels);
 
-		// TODO: It would be nice to output some kind of flag (perhaps
-		// "return false" or something) indicating that this conditional
-		// (num_pulled < num_frames) was reached. Then, inside the
-		// "pull_stretch" function, we should perform a slight fade-in
-		// so that, when an audio track transitions from unavailable to
-		// loaded, there is no popping noise.
+		return false;
 	}
+
+	return true;
 }
 
 void AudioPlayhead::_copy_frames(float *dest, float *src,
