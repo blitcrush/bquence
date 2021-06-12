@@ -77,8 +77,8 @@ bool AudioPlayhead::pull_stretch(double master_bpm, unsigned int track_idx,
 	ma_uint64 total_num_received = 0;
 	while (total_num_received < num_frames) {
 		if (soundtouch_numSamples(st) == 0) {
-			all_pulls_successful = all_pulls_successful && _pull(
-				track_idx, clip, _st_src, _NUM_ST_SRC_FRAMES);
+			all_pulls_successful = _pull(track_idx, clip, _st_src,
+				_NUM_ST_SRC_FRAMES) && all_pulls_successful;
 			soundtouch_putSamples(st, _st_src, _NUM_ST_SRC_FRAMES);
 		}
 
