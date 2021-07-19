@@ -50,7 +50,7 @@ private:
 	unsigned int _last_song_id = 0;
 	bool _last_song_id_valid = false;
 
-	ma_decoder _decoder = {};
+	ma_decoder _decoder;
 	bool _decoder_ready = false;
 
 	bool _end_of_song = false;

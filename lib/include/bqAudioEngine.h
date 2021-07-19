@@ -66,6 +66,7 @@ private:
 		float total_num_frames, float initial_x, bool reverse);
 	float _sigmoid_0_to_1(float x);
 
+	void _apply_next_bpm();
 	void _recalc_beats_samples_conversion_factors();
 
 	bool _is_track_valid(unsigned int track_idx);
@@ -95,17 +96,15 @@ private:
 		return (x < a) ? a : (x > b) ? b : x;
 	}
 
-	std::atomic<unsigned int> _num_channels = { 0 };
-	std::atomic<unsigned int> _sample_rate = { 0 };
-	std::atomic<double> _bpm = { 0.0 };
-	std::atomic<double> _beats_to_samples = { 0.0 };
-	std::atomic<double> _samples_to_beats = { 0.0 };
+	std::atomic<unsigned int> _num_channels;
+	std::atomic<unsigned int> _sample_rate;
+	std::atomic<double> _bpm, _next_bpm;
+	std::atomic<double> _beats_to_samples;
+	std::atomic<double> _samples_to_beats;
 
-	static constexpr unsigned int _NUM_TRACKS = WORLD_NUM_TRACKS;
-	AudioClipsArray _tracks[_NUM_TRACKS];
+	AudioClipsArray _tracks[WORLD_NUM_TRACKS];
 
-	static constexpr unsigned int _NUM_PLAYHEADS = WORLD_NUM_PLAYHEADS;
-	AudioPlayhead _playheads[_NUM_PLAYHEADS];
+	AudioPlayhead _playheads[WORLD_NUM_PLAYHEADS];
 
 	QwMpscFifoQueue<AudioMsg *, AUDIO_MSG_NEXT_LINK> _msg_queue;
 	QwNodePool<AudioMsg> *_msg_pool = nullptr;

@@ -5,6 +5,15 @@ namespace bq {
 IOEngine::IOEngine()
 {
 	_msg_pool = new QwNodePool<IOMsg>(_NUM_MAX_POOL_MSGS);
+
+	for (unsigned int i = 0; i < WORLD_NUM_TRACKS; ++i) {
+		_track_dirty[i] = false;
+
+		for (unsigned int j = 0; j < WORLD_NUM_PLAYHEADS; ++j) {
+			_playheads[j].cur_clip_dirty[i] = false;
+			_wait_cur_want_frame[j][i] = false;
+		}
+	}
 }
 
 IOEngine::~IOEngine()
@@ -78,11 +87,11 @@ void IOEngine::set_decode_config(ma_uint32 num_channels, ma_uint32 sample_rate)
 	_decode_num_channels = num_channels;
 	_decode_sample_rate = sample_rate;
 
-	for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
+	for (unsigned int i = 0; i < WORLD_NUM_TRACKS; ++i) {
 		_tracks[i].set_preload_config(_decode_num_channels,
 			_decode_sample_rate);
 
-		for (unsigned int j = 0; j < _NUM_PLAYHEADS; ++j) {
+		for (unsigned int j = 0; j < WORLD_NUM_PLAYHEADS; ++j) {
 			_decoders[j][i].set_decode_config(_decode_num_channels,
 				_decode_sample_rate);
 		}
@@ -98,8 +107,8 @@ void IOEngine::bind_library(Library *library)
 {
 	_library = library;
 
-	for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
-		for (unsigned int j = 0; j < _NUM_PLAYHEADS; ++j) {
+	for (unsigned int i = 0; i < WORLD_NUM_TRACKS; ++i) {
+		for (unsigned int j = 0; j < WORLD_NUM_PLAYHEADS; ++j) {
 			_decoders[j][i].bind_library(_library);
 		}
 
@@ -155,7 +164,7 @@ void IOEngine::handle_all_msgs()
 		_msg_pool->deallocate(msg);
 	}
 
-	for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
+	for (unsigned int i = 0; i < WORLD_NUM_TRACKS; ++i) {
 		if (_track_dirty[i]) {
 			if (_audio) {
 				_audio->receive_clips(i,
@@ -164,7 +173,7 @@ void IOEngine::handle_all_msgs()
 					_tracks[i].copy_old_preloads());
 			}
 
-			for (unsigned int j = 0; j < _NUM_PLAYHEADS; ++j) {
+			for (unsigned int j = 0; j < WORLD_NUM_PLAYHEADS; ++j) {
 				_wait_cur_want_frame[j][i] = true;
 
 				_playheads[j].cur_clip_dirty[i] = true;
@@ -175,8 +184,8 @@ void IOEngine::handle_all_msgs()
 		}
 	}
 
-	for (unsigned int i = 0; i < _NUM_PLAYHEADS; ++i) {
-		for (unsigned int j = 0; j < _NUM_TRACKS; ++j) {
+	for (unsigned int i = 0; i < WORLD_NUM_PLAYHEADS; ++i) {
+		for (unsigned int j = 0; j < WORLD_NUM_TRACKS; ++j) {
 			if (_playheads[i].cur_clip_dirty[j]) {
 				_update_audio_cur_clip_idx(i, j);
 				_playheads[i].cur_clip_dirty[j] = false;
@@ -283,12 +292,12 @@ void IOEngine::set_wait_cur_want_frame(unsigned int playhead,
 
 bool IOEngine::_is_track_valid(unsigned int track_idx)
 {
-	return track_idx < _NUM_TRACKS;
+	return track_idx < WORLD_NUM_TRACKS;
 }
 
 bool IOEngine::_is_playhead_valid(unsigned int playhead_idx)
 {
-	return playhead_idx < _NUM_PLAYHEADS;
+	return playhead_idx < WORLD_NUM_PLAYHEADS;
 }
 
 void IOEngine::_handle_insert_clip(IOMsgInsertClip &msg)
@@ -348,7 +357,7 @@ void IOEngine::_handle_jump_playhead(IOMsgJumpPlayhead &msg)
 		playhead.jump_beat = msg.beat;
 		playhead.jumping = true;
 		playhead.wait_playhead_jump = true;
-		for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
+		for (unsigned int i = 0; i < WORLD_NUM_TRACKS; ++i) {
 			_wait_cur_want_frame[msg.playhead][i] = true;
 			playhead.cur_clip_dirty[i] = true;
 			_decoders[msg.playhead][i].reset_next_send_frame();

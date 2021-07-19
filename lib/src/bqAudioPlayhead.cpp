@@ -2,9 +2,27 @@
 #include "bqIOEngine.h"
 
 namespace bq {
+AudioPlayhead::AudioPlayhead()
+{
+	_beat = 0.0;
+
+	for (unsigned int i = 0; i < WORLD_NUM_TRACKS; ++i) {
+		_cache[i].cur_want_frame = 0;
+
+		_st[i] = nullptr;
+
+		_cur_clip_idx[i] = 0;
+		_cur_song_id[i] = 0;
+		_expect_first_frame[i] = 0;
+		_last_song_id[i] = 0;
+		_last_song_id_valid[i] = 0;
+		_can_request_emergency_chunk[i] = 0;
+	}
+}
+
 AudioPlayhead::~AudioPlayhead()
 {
-	for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
+	for (unsigned int i = 0; i < WORLD_NUM_TRACKS; ++i) {
 		_pop_all_chunks(i);
 
 		soundtouch_destroyInstance(_st[i]);
@@ -27,7 +45,7 @@ void AudioPlayhead::set_playback_config(ma_uint32 num_channels,
 	_st_src = new float[static_cast<ma_uint64>(_NUM_ST_SRC_FRAMES) *
 		num_channels];
 
-	for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
+	for (unsigned int i = 0; i < WORLD_NUM_TRACKS; ++i) {
 		_setup_soundtouch(_st[i]);
 	}
 }
@@ -131,7 +149,7 @@ ma_uint64 AudioPlayhead::get_cur_want_frame(unsigned int track_idx)
 void AudioPlayhead::jump(double beat)
 {
 	if (beat != _beat) {
-		for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
+		for (unsigned int i = 0; i < WORLD_NUM_TRACKS; ++i) {
 			set_cannot_request_emergency_chunk(i);
 			_pop_all_chunks(i);
 		}
@@ -362,6 +380,6 @@ bool AudioPlayhead::_off_by_over_two(ma_uint64 a, ma_uint64 b)
 
 bool AudioPlayhead::_is_track_valid(unsigned int track_idx)
 {
-	return track_idx < _NUM_TRACKS;
+	return track_idx < WORLD_NUM_TRACKS;
 }
 }

@@ -17,7 +17,7 @@ class IOEngine;
 
 class AudioPlayhead {
 public:
-	AudioPlayhead() {}
+	AudioPlayhead();
 	~AudioPlayhead();
 
 	void set_playback_config(ma_uint32 num_channels, ma_uint32 sample_rate);
@@ -52,7 +52,6 @@ private:
 	bool _pull(unsigned int track_idx, AudioClip &clip, float *dest,
 		ma_uint64 num_frames);
 
-	static constexpr unsigned int _NUM_TRACKS = WORLD_NUM_TRACKS;
 	struct _TrackStInfo {
 		double last_pitch = 0.0;
 		double last_tempo = 0.0;
@@ -60,7 +59,7 @@ private:
 	};
 	struct _ChunksList {
 		PlayheadChunk *head = nullptr, *tail = nullptr;
-		std::atomic<ma_uint64> cur_want_frame = { 0 };
+		std::atomic<ma_uint64> cur_want_frame;
 	};
 
 	void _copy_frames(float *dest, float *src, ma_uint64 dest_first_frame,
@@ -77,30 +76,23 @@ private:
 
 	bool _is_track_valid(unsigned int track_idx);
 
-	std::atomic<double> _beat = { 0.0 };
+	std::atomic<double> _beat;
 
-	// Thank you Mixxx developers for figuring this number out!
+	// Why 519?
 	// https://github.com/mixxxdj/mixxx/blob/master/src/engine/bufferscalers/enginebufferscalest.cpp#L25
-	//
-	// TODO: At some point, perhaps setting this to a value higher than
-	// necessary (to ensure _st_src is allocated large enough), and then
-	// using SETTING_INITIAL_LATENCY (if SoundTouch instance was cleared) or
-	// SETTING_NOMINAL_INPUT_SEQUENCE (if SoundTouch instance was not
-	// cleared) inside pull_stretch's while loop, rather than
-	// _NUM_ST_SRC_FRAMES, would be optimal.
 	static constexpr unsigned int _NUM_ST_SRC_FRAMES = 519;
 	float *_st_src = nullptr;
 
-	HANDLE _st[_NUM_TRACKS] = { nullptr };
+	HANDLE _st[WORLD_NUM_TRACKS];
 
-	_TrackStInfo _st_info[_NUM_TRACKS];
-	_ChunksList _cache[_NUM_TRACKS];
-	std::atomic<unsigned int> _cur_clip_idx[_NUM_TRACKS] = { { 0 } };
-	std::atomic<unsigned int> _cur_song_id[_NUM_TRACKS] = { { 0 } };
-	std::atomic<ma_uint64> _expect_first_frame[_NUM_TRACKS] = { { 0 } };
-	std::atomic<unsigned int> _last_song_id[_NUM_TRACKS] = { { 0 } };
-	std::atomic<bool> _last_song_id_valid[_NUM_TRACKS] = { { false } };
-	std::atomic<bool> _can_request_emergency_chunk[_NUM_TRACKS] = { { false } };
+	_TrackStInfo _st_info[WORLD_NUM_TRACKS];
+	_ChunksList _cache[WORLD_NUM_TRACKS];
+	std::atomic<unsigned int> _cur_clip_idx[WORLD_NUM_TRACKS];
+	std::atomic<unsigned int> _cur_song_id[WORLD_NUM_TRACKS];
+	std::atomic<ma_uint64> _expect_first_frame[WORLD_NUM_TRACKS];
+	std::atomic<unsigned int> _last_song_id[WORLD_NUM_TRACKS];
+	std::atomic<bool> _last_song_id_valid[WORLD_NUM_TRACKS];
+	std::atomic<bool> _can_request_emergency_chunk[WORLD_NUM_TRACKS];
 
 	ma_uint32 _num_channels = 0;
 	ma_uint32 _sample_rate = 0;

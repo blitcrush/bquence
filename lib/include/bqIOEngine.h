@@ -66,23 +66,21 @@ private:
 	void _update_audio_cur_clip_idx(unsigned int playhead_idx,
 		unsigned int track_idx);
 
-	static constexpr unsigned int _NUM_TRACKS = WORLD_NUM_TRACKS;
-	IOTrack _tracks[_NUM_TRACKS];
-	bool _track_dirty[_NUM_TRACKS] = { false };
+	IOTrack _tracks[WORLD_NUM_TRACKS];
+	bool _track_dirty[WORLD_NUM_TRACKS];
 
 	// Used to determine for how many playheads we need to update current
 	// clip indices for the AudioEngine
-	static constexpr unsigned int _NUM_PLAYHEADS = WORLD_NUM_PLAYHEADS;
 	struct DirtyPlayheadInfo {
 		double jump_beat = 0.0;
 		bool jumping = false;
 		bool wait_playhead_jump = false;
-		bool cur_clip_dirty[_NUM_TRACKS] = { false };
-	} _playheads[_NUM_PLAYHEADS];
-	std::atomic_bool _wait_cur_want_frame[_NUM_PLAYHEADS][_NUM_TRACKS] =
-	{ { { false } } };
+		bool cur_clip_dirty[WORLD_NUM_TRACKS];
+	} _playheads[WORLD_NUM_PLAYHEADS];
+	std::atomic_bool _wait_cur_want_frame[WORLD_NUM_PLAYHEADS]
+		[WORLD_NUM_TRACKS];
 
-	IOAudioFileDecoder _decoders[_NUM_PLAYHEADS][_NUM_TRACKS];
+	IOAudioFileDecoder _decoders[WORLD_NUM_PLAYHEADS][WORLD_NUM_TRACKS];
 
 	QwMpscFifoQueue<IOMsg *, IO_MSG_NEXT_LINK> _msg_queue;
 	QwNodePool<IOMsg> *_msg_pool = nullptr;

@@ -4,11 +4,18 @@
 namespace bq {
 AudioEngine::AudioEngine()
 {
+	_num_channels = 0;
+	_sample_rate = 0;
+	_bpm = 0.0;
+	_next_bpm = 0.0;
+	_beats_to_samples = 0.0;
+	_samples_to_beats = 0.0;
+
 	set_bpm(120.0);
 
 	_msg_pool = new QwNodePool<AudioMsg>(_NUM_MAX_POOL_MSGS);
 
-	for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
+	for (unsigned int i = 0; i < WORLD_NUM_TRACKS; ++i) {
 		_tracks[i].num_clips = 0;
 		_tracks[i].clips = nullptr;
 	}
@@ -27,7 +34,7 @@ AudioEngine::~AudioEngine()
 
 	handle_all_msgs();
 
-	for (unsigned int i = 0; i < _NUM_TRACKS; ++i) {
+	for (unsigned int i = 0; i < WORLD_NUM_TRACKS; ++i) {
 		if (_tracks[i].clips) {
 			delete[] _tracks[i].clips;
 		}
@@ -115,10 +122,10 @@ void AudioEngine::pull(unsigned int playhead_idx, unsigned int track_idx,
 		}
 		ma_uint64 song_first_frame = clip.first_frame +
 			_library->beats_to_out_samples(clip.song_id,
-				first_beat - clip.start);
+				clip_first_beat - clip.start);
 		ma_uint64 song_next_first_frame = clip.first_frame +
 			_library->beats_to_out_samples(clip.song_id,
-				last_beat - clip.start);
+				clip_last_beat - clip.start);
 
 		if (prev_last_frame_ofs < clip_first_frame_ofs) {
 			ma_uint64 silence_num_frames = clip_first_frame_ofs -
@@ -200,7 +207,7 @@ void AudioEngine::set_playback_config(ma_uint32 num_channels,
 	_sample_rate = sample_rate;
 	_recalc_beats_samples_conversion_factors();
 
-	for (unsigned int i = 0; i < _NUM_PLAYHEADS; ++i) {
+	for (unsigned int i = 0; i < WORLD_NUM_PLAYHEADS; ++i) {
 		_playheads[i].set_playback_config(num_channels, sample_rate);
 	}
 }
@@ -209,7 +216,7 @@ void AudioEngine::bind_io_engine(IOEngine *io)
 {
 	_io = io;
 
-	for (unsigned int i = 0; i < _NUM_PLAYHEADS; ++i) {
+	for (unsigned int i = 0; i < WORLD_NUM_PLAYHEADS; ++i) {
 		_playheads[i].bind_io_engine(_io);
 	}
 }
@@ -218,13 +225,17 @@ void AudioEngine::bind_library(Library *library)
 {
 	_library = library;
 
-	for (unsigned int i = 0; i < _NUM_PLAYHEADS; ++i) {
+	for (unsigned int i = 0; i < WORLD_NUM_PLAYHEADS; ++i) {
 		_playheads[i].bind_library(_library);
 	}
 }
 
 void AudioEngine::handle_all_msgs()
 {
+	if (_bpm != _next_bpm) {
+		_apply_next_bpm();
+	}
+
 	AudioMsg *msg = nullptr;
 	while ((msg = _msg_queue.pop())) {
 		switch (msg->type) {
@@ -356,8 +367,7 @@ double AudioEngine::get_bpm()
 
 void AudioEngine::set_bpm(double bpm)
 {
-	_bpm = bpm;
-	_recalc_beats_samples_conversion_factors();
+	_next_bpm = bpm;
 }
 
 ma_uint64 AudioEngine::beats_to_samples(double beats)
@@ -395,6 +405,12 @@ float AudioEngine::_sigmoid_0_to_1(float x)
 	return 0.5f + 1.5f * (x / (1.0f + abs(x)));
 }
 
+void AudioEngine::_apply_next_bpm()
+{
+	_bpm = _next_bpm.load();
+	_recalc_beats_samples_conversion_factors();
+}
+
 void AudioEngine::_recalc_beats_samples_conversion_factors()
 {
 	_beats_to_samples = (60.0 / _bpm) * _sample_rate;
@@ -403,12 +419,12 @@ void AudioEngine::_recalc_beats_samples_conversion_factors()
 
 bool AudioEngine::_is_track_valid(unsigned int track_idx)
 {
-	return track_idx < _NUM_TRACKS;
+	return track_idx < WORLD_NUM_TRACKS;
 }
 
 bool AudioEngine::_is_playhead_valid(unsigned int playhead_idx)
 {
-	return playhead_idx < _NUM_PLAYHEADS;
+	return playhead_idx < WORLD_NUM_PLAYHEADS;
 }
 
 void AudioEngine::_handle_receive_clips(AudioMsgReceiveClips &msg)
