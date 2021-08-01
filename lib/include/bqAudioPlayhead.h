@@ -72,8 +72,6 @@ private:
 	void _pop_chunk(_ChunksList &chunks);
 	void _pop_all_chunks(unsigned int track_idx);
 
-	bool _off_by_over_two(ma_uint64 a, ma_uint64 b);
-
 	bool _is_track_valid(unsigned int track_idx);
 
 	std::atomic<double> _beat;
